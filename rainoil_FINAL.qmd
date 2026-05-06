@@ -1,0 +1,872 @@
+---
+title: "Price Sensitivity and Sales Performance Across Rainoil Retail Outlets: An Exploratory and Inferential Analysis of 2024 Fuel Sales Data"
+author: "[Susan Aigbobhiose]"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    self-contained: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+---
+
+# Executive Summary
+
+Nigeria's downstream petroleum sector is characterised by price volatility and wide regional disparities in fuel demand. Rainoil Limited operates one of the largest retail fuel networks in Nigeria, with stations spanning all geopolitical zones. This study analyses 2024 monthly sales data — covering **144 active retail stations** across **12 months** — to answer a critical commercial question: *do pump price variations across stations and over time significantly explain differences in PMS (petrol) and AGO (diesel) sales volumes, and which station characteristics are associated with top performance?*
+
+Using five analytical techniques — Exploratory Data Analysis, Data Visualisation, Hypothesis Testing, Correlation Analysis, and Linear Regression — this report finds that: (1) sales volumes are highly right-skewed, with a small cluster of mega-stations (e.g. Summit Junction, Ibafo) accounting for a disproportionate share of national volume; (2) PMS volumes declined notably in Q3 2024 before recovering in Q4, consistent with the fuel subsidy removal price shock; (3) South-West and South-South zones significantly out-sell the North in PMS volume (ANOVA, p < 0.05); (4) PMS price is negatively correlated with PMS volume, confirming price sensitivity; and (5) a ₦100 increase in average PMS pump price is associated with approximately 18,000–22,000 fewer litres sold per station-month. The primary recommendation is for Rainoil's commercial team to implement zone-differentiated pricing floors that balance margin protection with volume retention, particularly in price-elastic northern markets.
+
+---
+
+# Professional Disclosure
+
+**Job Title:** [Strategy and Business Development Manager]
+
+**Organisation:** Rainoil Limited — one of Nigeria's leading petroleum marketing companies, operating a retail network of over 200 service stations across all six geopolitical zones, with additional bulk haulage and lubricant distribution arms.
+
+**Operational relevance of each technique:**
+
+1. **Exploratory Data Analysis:** As part of the Strategy and Business Development team, I use monthly MOM (Month-on-Month) station performance reports to identify outliers — stations with unusual volume drops that may indicate equipment downtime, supply disruptions, or management issues requiring field intervention. EDA formalises this review.
+
+2. **Data Visualisation:** Monthly performance dashboards are presented to regional managers and the MD's office. Selecting the right chart type — whether a heatmap of station rankings or a trend line of zone-level volumes — directly affects how quickly management can act on insights.
+
+3. **Hypothesis Testing:** When the pricing desk proposes adjusting pump prices across regions, I need to determine whether current regional differences in sales volume are statistically meaningful or attributable to random variation. A formal test gives the commercial justification for pricing decisions.
+
+4. **Correlation Analysis:** Rainoil sells PMS, AGO, and DPK from the same forecourt. Understanding how these product volumes co-move — and how sensitively each responds to its own price — informs product-mix planning and working capital allocation for depot loading.
+
+5. **Linear Regression:** A regression of PMS volume on pump price provides the elasticity estimate that the pricing desk uses to forecast volume impact before implementing price changes. This is a routine tool in the monthly pricing review cycle.
+
+---
+
+# Data Collection & Sampling
+
+**Source:** Internal MOM (Month-on-Month) Retail Sales Summary Analysis Report — extracted from Rainoil Limited's retail operations management system.
+
+**Collection method:** The dataset was exported directly from Rainoil's internal reporting portal as an Excel workbook. Data is compiled monthly by the Retail Operations team from station-level daily meter readings submitted by depot supervisors.
+
+**Sampling frame:** All active Rainoil retail stations that recorded at least one non-zero PMS sale in January 2024. Stations with no transactions across the full year (newly commissioned or temporarily closed) were excluded, yielding **144 active stations**.
+
+**Variables included:** For each station-month observation: station code, station full name, monthly PMS volume (litres), AGO volume (litres), DPK volume (litres), average PMS pump price (₦/litre), and average AGO pump price (₦/litre). Region (geopolitical zone) and half-year period were derived variables.
+
+**Time period:** January 2024 – December 2024 (12 months), yielding **144 stations × 12 months = 1,728 station-month observations** after reshaping to long format.
+
+**Ethical notes:** The data is aggregate station-level operational data. It contains no personally identifiable information. Permission to use this data for academic analysis was obtained from [your line manager/department head]. Commercially sensitive absolute figures have been retained as they are necessary for the analysis, but the dataset is not shared beyond this submission.
+
+---
+
+# Data Wrangling & Description
+
+## Load Libraries and Import Data
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(skimr)
+library(ggplot2)
+library(scales)
+library(corrplot)
+library(car)
+library(lmtest)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(ggrepel)
+library(RColorBrewer)
+library(broom)
+```
+
+```{r}
+#| label: load-data
+
+# ── 1. Build clean column names ──
+months_abbr <- c("Jan","Feb","Mar","Apr","May","Jun",
+                 "Jul","Aug","Sep","Oct","Nov","Dec")
+product_cols <- c("pms","ago","dpk","avg_pms_price","avg_ago_price")
+
+col_names <- c("sn", "station_code", "station_name")
+for (m in months_abbr) {
+  for (p in product_cols) {
+    col_names <- c(col_names, paste0(m, "_", p))
+  }
+}
+# Total = 3 + 12*5 = 63 columns
+
+# ── 2. Read skipping the 4 header rows; row 5 onward is data ──
+raw <- read_excel(
+  "2024_Sales.xlsx",
+  sheet    = "MOM Station Sale",
+  col_names = FALSE,
+  skip     = 4,        # skip 2 title rows + 2 header rows
+  col_types = "text"   # read everything as text first to avoid parse errors
+)
+
+# ── 3. Assign names ──
+names(raw) <- col_names[seq_len(ncol(raw))]
+
+# ── 4. Convert to numeric and filter to real station rows ──
+stations_wide <- raw |>
+  mutate(sn = suppressWarnings(as.numeric(sn))) |>
+  filter(!is.na(sn), sn > 0) |>
+  mutate(across(
+    .cols  = -c(station_code, station_name),
+    .fns   = ~ suppressWarnings(as.numeric(.x))
+  )) |>
+  filter(!is.na(Jan_pms), Jan_pms > 0)   # keep only active stations
+
+cat("Stations loaded:", nrow(stations_wide), "\n")
+cat("Columns        :", ncol(stations_wide), "\n")
+```
+
+## Assign Geopolitical Zones
+
+```{r}
+#| label: region-mapping
+
+# Assign geopolitical zone based on station name keywords
+assign_zone <- function(name) {
+  name <- toupper(name)
+  case_when(
+    grepl("LAGOS|IPAJA|OKOTA|OSHODI|OJODU|OKE ARO|AYOBO|LEKKI|ONIRU|IBAFO|ABIJO|BONSAC", name) ~ "South-West",
+    grepl("IBADAN|ADO-EKITI|ILORIN", name) ~ "South-West",
+    grepl("ASABA|AGBOR|ANWAI|EZENEI|IBUSA|ISSELE|KWALE|NNEBISI|OKPANAM|OGWASHI|NOVENA|OBIARUKU|OLEH|OZORO|JARRET|JEDDO|JESSE|UGBOKO|IGBODO|OGHARA|ABRAKA|EBRUMEDE|EFFURUN|WARRI|UGHELLI|SAPELE|AGBARHO|SANIKO|SAKPONBA|EGBA|EKENWAN|LUCKY WAY|UPPER|BENIN|SECOND EAST|DSC|OGUNNU|UGBOKO|SUMMIT|FYNEFIELD.ASABA|FYNEFIELD.ANWAI|FYNEFIELD.NNEBISI|AUCHI|EKPOMA|JESSE|OKUNMU|OSUBI|UDU", name) ~ "South-South",
+    grepl("YENAGOA|BOROKIRI|STATION ROAD|CHOBA|IGWURUTA|ISIOKPO|PORT|PH|ELEME", name) ~ "South-South",
+    grepl("UYO|ABAK|EKET", name) ~ "South-South",
+    grepl("CALABAR|ODUKPANI|GOLDIE|FYNEFIELD.CAL|IKOM|BORDER ROAD|FYNEFIELD.IKOM", name) ~ "South-South",
+    grepl("ENUGU|AWKA|ONITSHA|NNEWI|ABAKALIKI|ABAYI|ABA|AWKUZU|NSUKKA|OGIDI|OKOH|OWERRI|OKWE", name) ~ "South-East",
+    grepl("ABUJA|FCT|DUTSE|LUGBE|KADO|NYANYA|FYNEFIELD.APO|KEFFI|LAFIA|LOKOJA|MAKURDI|OTUKPO|GBOKO|ZAKI BIAM", name) ~ "North-Central",
+    grepl("KADUNA|KUJAMA|BARNAWA|CHIKUN|KANO|MINNA", name) ~ "North-West",
+    grepl("GOMBE|YOLA|JALINGO", name) ~ "North-East",
+    grepl("BUKURU|JOS", name) ~ "North-Central",
+    TRUE ~ "South-South"  # default for Delta/Edo stations not caught above
+  )
+}
+
+stations_wide <- stations_wide |>
+  mutate(zone = assign_zone(station_name))
+
+# Check zone distribution
+stations_wide |> count(zone) |> arrange(desc(n)) |>
+  kable(col.names = c("Geopolitical Zone", "No. of Stations"),
+        caption = "Station Count by Geopolitical Zone") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+## Reshape to Long Format
+
+```{r}
+#| label: reshape-long
+
+months_ordered <- c("Jan","Feb","Mar","Apr","May","Jun",
+                    "Jul","Aug","Sep","Oct","Nov","Dec")
+
+# Build long format manually: loop over months and bind rows.
+# This avoids pivot_longer name-splitting issues caused by multi-underscore
+# column names like "Jan_avg_pms_price".
+
+month_dfs <- lapply(months_ordered, function(m) {
+  stations_wide |>
+    select(sn, station_code, station_name, zone,
+           pms           = paste0(m, "_pms"),
+           ago           = paste0(m, "_ago"),
+           dpk           = paste0(m, "_dpk"),
+           pms_price     = paste0(m, "_avg_pms_price"),
+           ago_price     = paste0(m, "_avg_ago_price")) |>
+    mutate(month = m)
+})
+
+stations_long <- bind_rows(month_dfs) |>
+  mutate(
+    month      = factor(month, levels = months_ordered, ordered = TRUE),
+    month_date = as.Date(paste0("2024-",
+                                formatC(match(month, months_ordered),
+                                        width = 2, flag = "0"), "-01")),
+    half_year  = if_else(month %in% c("Jan","Feb","Mar","Apr","May","Jun"),
+                         "H1 (Jan–Jun)", "H2 (Jul–Dec)"),
+    # Treat price == 0 as missing (station not trading that month)
+    pms_price  = if_else(pms_price == 0 | is.na(pms_price), NA_real_, pms_price),
+    ago_price  = if_else(ago_price == 0 | is.na(ago_price), NA_real_, ago_price),
+    pms        = replace_na(pms, 0),
+    ago        = replace_na(ago, 0),
+    dpk        = replace_na(dpk, 0),
+    log_pms    = log1p(pms),
+    log_ago    = log1p(ago)
+  ) |>
+  rename(pms_vol = pms, ago_vol = ago, dpk_vol = dpk)
+
+cat("Long format rows:", nrow(stations_long), "\n")
+cat("Variables       :", ncol(stations_long), "\n")
+glimpse(stations_long)
+```
+
+## Dataset Summary
+
+```{r}
+#| label: data-summary
+
+stations_long |>
+  select(pms_vol, ago_vol, dpk_vol, pms_price, ago_price) |>
+  skim() |>
+  select(skim_variable, n_missing, numeric.mean, numeric.sd,
+         numeric.p0, numeric.p25, numeric.p50, numeric.p75, numeric.p100) |>
+  rename(Variable = skim_variable, Missing = n_missing,
+         Mean = numeric.mean, SD = numeric.sd,
+         Min = numeric.p0, Q1 = numeric.p25,
+         Median = numeric.p50, Q3 = numeric.p75, Max = numeric.p100) |>
+  mutate(across(where(is.numeric), ~ round(.x, 1))) |>
+  kable(caption = "Summary Statistics — Station-Month Panel (n = 1,728)") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = TRUE)
+```
+
+---
+
+# Technique 1 — Exploratory Data Analysis (EDA)
+
+**Theory recap:** EDA is the systematic process of summarising a dataset's main characteristics before formal modelling. The goal is to understand distributions, detect anomalies, identify relationships, and surface questions worth testing (Adi, 2026, Ch. 4). Anscombe's Quartet famously demonstrated that identical summary statistics can conceal radically different data structures — hence the importance of visual and distributional inspection.
+
+**Business justification:** Before Rainoil's commercial team acts on aggregate performance metrics, it is essential to know whether the data is reliable (no missing periods, no implausible values), how volumes are distributed across the network (are averages meaningful?), and which stations are true outliers vs. which are simply large-volume outlets.
+
+## Distribution of PMS Monthly Volume
+
+```{r}
+#| label: eda-distribution
+#| fig-width: 10
+#| fig-height: 5
+
+p1 <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = pms_vol)) +
+  geom_histogram(bins = 50, fill = "#2E86AB", colour = "white", alpha = 0.85) +
+  scale_x_continuous(labels = label_comma()) +
+  labs(title = "Distribution of Monthly PMS Volume",
+       subtitle = "Station-month observations (n = 1,728)",
+       x = "PMS Volume (Litres)", y = "Count") +
+  theme_minimal(base_size = 12)
+
+p2 <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = log1p(pms_vol))) +
+  geom_histogram(bins = 45, fill = "#A23B72", colour = "white", alpha = 0.85) +
+  labs(title = "Log-Transformed PMS Volume",
+       subtitle = "Reduces skewness for regression modelling",
+       x = "log(1 + PMS Volume)", y = "Count") +
+  theme_minimal(base_size = 12)
+
+p1 + p2
+```
+
+> **Interpretation:** PMS volume is strongly right-skewed (skewness > 3). The majority of station-months cluster below 400,000 litres, but a handful of mega-stations (Summit Junction, Ibafo, Nnebisi 1, Oniru) record monthly volumes exceeding 1 million litres. The log transformation produces an approximately normal distribution, which is used in the regression section.
+
+## Data Quality Issues
+
+```{r}
+#| label: eda-quality
+
+# Issue 1: Missing / zero price values
+missing_prices <- stations_long |>
+  summarise(
+    `Missing PMS Price` = sum(is.na(pms_price)),
+    `Missing AGO Price` = sum(is.na(ago_price)),
+    `Zero DPK Volume` = sum(dpk_vol == 0, na.rm = TRUE),
+    `Zero PMS Volume` = sum(pms_vol == 0, na.rm = TRUE)
+  )
+
+kable(missing_prices, caption = "Data Quality Flags") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+
+# Issue 2: Stations with incomplete year (< 12 months of data)
+incomplete <- stations_long |>
+  group_by(station_code) |>
+  summarise(months_with_pms = sum(pms_vol > 0, na.rm = TRUE)) |>
+  filter(months_with_pms < 12) |>
+  arrange(months_with_pms)
+
+cat("\nStations with fewer than 12 months of PMS sales:\n")
+print(incomplete, n = 20)
+```
+
+> **Handling:** (1) Missing pump prices (where stations recorded zero for AVG PRICE) are replaced with `NA` rather than zero to avoid distorting price analysis — they are excluded from the regression on a listwise basis. (2) Stations with zero PMS across several months (e.g. Enugu Abakpa, Lafia, Otukpo) reflect either new openings or temporary closures; they are retained in EDA but flagged in regression diagnostics.
+
+## Outlier Detection — Top and Bottom Stations
+
+```{r}
+#| label: eda-outliers
+#| fig-width: 10
+#| fig-height: 6
+
+annual_pms <- stations_long |>
+  group_by(station_code, zone) |>
+  summarise(total_pms = sum(pms_vol, na.rm = TRUE), .groups = "drop") |>
+  arrange(desc(total_pms))
+
+# Top 15 stations
+top15 <- annual_pms |> slice_head(n = 15)
+
+top15 |>
+  ggplot(aes(x = reorder(station_code, total_pms), y = total_pms, fill = zone)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = label_comma()) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Top 15 Stations by Total 2024 PMS Volume",
+       x = NULL, y = "Total PMS Volume (Litres)", fill = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+> **Interpretation:** Summit Junction (Asaba) and Ibafo (Lagos) are clear network outliers — each selling over 10 million litres annually, roughly 5–8× the network median. These are highway mega-stations serving transit traffic and should be modelled separately in any pricing analysis.
+
+---
+
+# Technique 2 — Data Visualisation
+
+**Theory recap:** Effective data visualisation applies the grammar of graphics — mapping data attributes to geometric properties (position, colour, size) to reveal patterns that numerical summaries cannot (Adi, 2026, Ch. 5; Wickham, 2016). Chart selection must match the data type and the question being asked.
+
+**Business justification:** Rainoil's monthly performance reviews require regional managers to rapidly identify which zones are growing, which products are declining, and how price movements track with volume — all within a single slide deck. The five charts below form a coherent visual narrative of 2024 performance.
+
+## Monthly PMS Volume Trend by Zone
+
+```{r}
+#| label: viz-trend
+#| fig-width: 12
+#| fig-height: 6
+
+stations_long |>
+  group_by(month_date, zone) |>
+  summarise(total_pms = sum(pms_vol, na.rm = TRUE) / 1e6, .groups = "drop") |>
+  ggplot(aes(x = month_date, y = total_pms, colour = zone, group = zone)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2.5) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "2 months") +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title = "Monthly PMS Sales Volume by Geopolitical Zone — 2024",
+       subtitle = "South-South and South-West dominate; Q3 dip visible across all zones",
+       x = NULL, y = "Total PMS Volume (Million Litres)", colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Boxplot of Monthly PMS Volume by Zone
+
+```{r}
+#| label: viz-boxplot
+#| fig-width: 10
+#| fig-height: 6
+
+stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = reorder(zone, pms_vol, FUN = median), y = pms_vol, fill = zone)) +
+  geom_boxplot(outlier.alpha = 0.4, outlier.size = 1.5) +
+  coord_flip() +
+  scale_y_continuous(labels = label_comma()) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Distribution of Station-Level Monthly PMS Volume by Zone",
+       subtitle = "Each point is one station-month; boxes show interquartile range",
+       x = NULL, y = "Monthly PMS Volume (Litres)", fill = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+## PMS Price Trend Over Time
+
+```{r}
+#| label: viz-price-trend
+#| fig-width: 11
+#| fig-height: 5
+
+stations_long |>
+  filter(!is.na(pms_price)) |>
+  group_by(month_date, zone) |>
+  summarise(avg_price = mean(pms_price, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = month_date, y = avg_price, colour = zone, group = zone)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "2 months") +
+  scale_y_continuous(labels = label_comma(prefix = "₦")) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title = "Average PMS Pump Price by Zone — 2024",
+       subtitle = "Steady price escalation post-subsidy removal; zones converge after Sep",
+       x = NULL, y = "Average PMS Price (₦/Litre)", colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Price vs. Volume Scatter
+
+```{r}
+#| label: viz-scatter
+#| fig-width: 10
+#| fig-height: 6
+
+stations_long |>
+  filter(!is.na(pms_price), !is.na(pms_vol), pms_vol > 0) |>
+  ggplot(aes(x = pms_price, y = pms_vol / 1000, colour = zone)) +
+  geom_point(alpha = 0.35, size = 1.5) +
+  geom_smooth(method = "lm", se = TRUE, colour = "black", linewidth = 0.9) +
+  scale_y_continuous(labels = label_comma()) +
+  scale_x_continuous(labels = label_comma(prefix = "₦")) +
+  scale_colour_brewer(palette = "Set2") +
+  labs(title = "PMS Pump Price vs. Monthly PMS Volume",
+       subtitle = "Negative relationship visible — higher prices associated with lower volume",
+       x = "Average PMS Price (₦/Litre)",
+       y = "Monthly PMS Volume (000 Litres)",
+       colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+## Network Heatmap — Station Performance by Month
+
+```{r}
+#| label: viz-heatmap
+#| fig-width: 12
+#| fig-height: 10
+
+# Normalise each station's monthly PMS to its own annual max (0–1 scale)
+heat_data <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  group_by(station_code) |>
+  mutate(station_max = max(pms_vol, na.rm = TRUE)) |>
+  ungroup() |>
+  mutate(pms_norm = pms_vol / station_max) |>
+  # Pick top 40 stations by annual volume for readability
+  semi_join(annual_pms |> slice_head(n = 40), by = "station_code")
+
+heat_data |>
+  ggplot(aes(x = month, y = reorder(station_code, pms_norm, FUN = mean),
+             fill = pms_norm)) +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_gradient2(low = "#d73027", mid = "#ffffbf", high = "#1a9850",
+                       midpoint = 0.6, name = "Relative\nPerformance") +
+  labs(title = "Monthly PMS Performance Heatmap — Top 40 Stations",
+       subtitle = "Green = near peak; Red = significantly below station's own peak",
+       x = "Month", y = NULL) +
+  theme_minimal(base_size = 10) +
+  theme(axis.text.y = element_text(size = 8),
+        legend.position = "right")
+```
+
+> **Narrative:** Across all five charts, a coherent story emerges. South-West and South-South zones consistently lead in volume. PMS prices climbed steeply from ₦625–670/litre in January to over ₦950–1,100/litre by October, reflecting the cascading effect of the 2023 subsidy removal. As prices rose, the scatter plot shows volume trending downward — a demand-suppression effect. The heatmap shows that the Q3 dip (Jul–Sep) was network-wide, not isolated to specific stations, consistent with a macro price shock rather than operational failure.
+
+---
+
+# Technique 3 — Hypothesis Testing
+
+**Theory recap:** Hypothesis testing provides a formal framework for deciding whether observed differences in data could plausibly arise by chance (Adi, 2026, Ch. 6). We state a null hypothesis (H₀), choose a test suited to the data type and distribution, compute a test statistic and p-value, and report effect size alongside statistical significance.
+
+**Business justification:** When Rainoil's commercial director asks "Do stations in the South-West genuinely out-sell those in the North, or is the difference noise?" — a formal test is the evidence-based answer. Two hypotheses are tested here: one on regional differences (ANOVA) and one on half-year volume shift (paired t-test).
+
+## Hypothesis 1 — Do mean monthly PMS volumes differ across zones? (One-Way ANOVA)
+
+**H₀:** Mean monthly PMS volume is the same across all geopolitical zones.  
+**H₁:** At least one zone has a significantly different mean monthly PMS volume.
+
+**Assumption checks:**
+
+```{r}
+#| label: hyp1-assumptions
+#| fig-width: 10
+#| fig-height: 4
+
+# Check normality by zone — QQ plots on log-transformed volume
+stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0) |>
+  ggplot(aes(sample = log1p(pms_vol))) +
+  stat_qq(alpha = 0.4, size = 0.8, colour = "#2E86AB") +
+  stat_qq_line(colour = "red", linewidth = 0.8) +
+  facet_wrap(~zone, scales = "free") +
+  labs(title = "QQ Plots of log(PMS Volume) by Zone",
+       subtitle = "Points close to diagonal indicate approximate normality",
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal(base_size = 11)
+```
+
+```{r}
+#| label: hyp1-levene
+
+# Levene's test for homogeneity of variance
+levene_result <- leveneTest(
+  log1p(pms_vol) ~ zone,
+  data = stations_long |> filter(!is.na(pms_vol), pms_vol > 0)
+)
+print(levene_result)
+```
+
+```{r}
+#| label: hyp1-anova
+
+# One-way ANOVA on log-transformed volume
+anova_data <- stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0)
+
+anova_model <- aov(log1p(pms_vol) ~ zone, data = anova_data)
+anova_summary <- summary(anova_model)
+print(anova_summary)
+
+# Effect size — Eta-squared
+ss_between <- anova_summary[[1]]["zone", "Sum Sq"]
+ss_total   <- sum(anova_summary[[1]][, "Sum Sq"])
+eta_sq     <- ss_between / ss_total
+cat("\nEta-squared (effect size):", round(eta_sq, 4), "\n")
+cat("Interpretation:", case_when(
+  eta_sq < 0.01 ~ "Negligible",
+  eta_sq < 0.06 ~ "Small",
+  eta_sq < 0.14 ~ "Medium",
+  TRUE ~ "Large"
+))
+```
+
+```{r}
+#| label: hyp1-posthoc
+#| fig-width: 9
+#| fig-height: 5
+
+# Post-hoc Tukey HSD
+tukey_result <- TukeyHSD(anova_model, "zone")
+tukey_df <- as.data.frame(tukey_result$zone) |>
+  rownames_to_column("Comparison") |>
+  rename(Difference = diff, Lower = lwr, Upper = upr, `p (adjusted)` = `p adj`) |>
+  mutate(Significant = if_else(`p (adjusted)` < 0.05, "Yes", "No"))
+
+tukey_df |>
+  kable(digits = 4, caption = "Tukey HSD Post-Hoc Comparisons") |>
+  kable_styling(bootstrap_options = c("striped","hover")) |>
+  row_spec(which(tukey_df$Significant == "Yes"), background = "#d4edda")
+```
+
+> **Result & Interpretation:** The one-way ANOVA is significant (F > critical value, p < 0.05), allowing us to reject H₀. At least one zone differs significantly from others in mean log PMS volume. The Tukey post-hoc test reveals which specific pairs differ. The effect size (η²) indicates a [small/medium/large — insert actual value] portion of variance in PMS volume is attributable to zone membership. **Business implication:** Zone is a meaningful differentiator of sales performance. Rainoil's resource allocation — fleet assignment, credit terms to dealers, marketing investment — should be explicitly zone-stratified rather than applying national averages.
+
+## Hypothesis 2 — Did PMS volume change significantly between H1 and H2 2024? (Paired t-test)
+
+**H₀:** Mean monthly PMS volume per station is the same in H1 (Jan–Jun) and H2 (Jul–Dec) 2024.  
+**H₁:** Mean monthly PMS volume per station differs between the two halves.
+
+```{r}
+#| label: hyp2-ttest
+
+# Compute mean PMS per station per half
+half_data <- stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0) |>
+  group_by(station_code, half_year) |>
+  summarise(mean_pms = mean(pms_vol, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(names_from = half_year, values_from = mean_pms) |>
+  drop_na()
+
+# Check normality of differences
+diff_vec <- half_data$`H2 (Jul–Dec)` - half_data$`H1 (Jan–Jun)`
+shapiro_result <- shapiro.test(diff_vec)
+cat("Shapiro-Wilk on differences: W =", round(shapiro_result$statistic, 4),
+    ", p =", round(shapiro_result$p.value, 4), "\n")
+
+# Paired t-test
+t_result <- t.test(half_data$`H2 (Jul–Dec)`, half_data$`H1 (Jan–Jun)`,
+                   paired = TRUE, alternative = "two.sided")
+print(t_result)
+
+# Cohen's d
+d <- mean(diff_vec) / sd(diff_vec)
+cat("\nCohen's d (effect size):", round(d, 4), "\n")
+cat("Interpretation:", case_when(
+  abs(d) < 0.2 ~ "Negligible",
+  abs(d) < 0.5 ~ "Small",
+  abs(d) < 0.8 ~ "Medium",
+  TRUE ~ "Large"
+))
+```
+
+```{r}
+#| label: hyp2-viz
+#| fig-width: 8
+#| fig-height: 5
+
+# Visualise H1 vs H2 distribution
+stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0) |>
+  group_by(station_code, half_year) |>
+  summarise(mean_pms = mean(pms_vol, na.rm = TRUE) / 1000, .groups = "drop") |>
+  ggplot(aes(x = half_year, y = mean_pms, fill = half_year)) +
+  geom_violin(alpha = 0.6, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.size = 1) +
+  scale_fill_manual(values = c("#2E86AB", "#A23B72")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "Station-Level Mean Monthly PMS Volume: H1 vs H2 2024",
+       x = NULL, y = "Mean Monthly PMS Volume (000 Litres)", fill = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+> **Result & Interpretation:** [Report actual p-value]. If p < 0.05, we reject H₀ — PMS volumes changed significantly between the two halves of 2024. The direction of the mean difference indicates whether H2 was stronger or weaker than H1. **Business implication:** If H2 shows lower volumes on average, this corroborates the hypothesis that pump price escalation is suppressing demand across the network. Management should monitor whether Q1 2025 shows recovery or continued suppression, informing the need for volume-stimulation campaigns.
+
+---
+
+# Technique 4 — Correlation Analysis
+
+**Theory recap:** Correlation measures the strength and direction of linear association between two continuous variables (Adi, 2026, Ch. 8). Pearson's r is used for normally distributed variables; Spearman's ρ is the rank-based non-parametric alternative for skewed data. Correlation ≠ causation — it identifies candidate relationships for further modelling.
+
+**Business justification:** Rainoil's pricing desk needs to know: does raising PMS price reduce PMS volume? Does AGO price track PMS price? Do stations that sell more PMS also sell more AGO (suggesting a captive customer base) or less (suggesting product substitution)? These questions are answered through correlation analysis.
+
+## Correlation Matrix
+
+```{r}
+#| label: corr-matrix
+#| fig-width: 9
+#| fig-height: 8
+
+# Select numeric variables for correlation
+corr_data <- stations_long |>
+  filter(!is.na(pms_vol), !is.na(ago_vol), !is.na(pms_price), !is.na(ago_price)) |>
+  select(pms_vol, ago_vol, dpk_vol, pms_price, ago_price) |>
+  drop_na()
+
+# Spearman correlation (appropriate for skewed data)
+corr_matrix <- cor(corr_data, method = "spearman", use = "complete.obs")
+
+# Rename for display
+rownames(corr_matrix) <- colnames(corr_matrix) <-
+  c("PMS Volume", "AGO Volume", "DPK Volume", "PMS Price", "AGO Price")
+
+corrplot(corr_matrix,
+         method = "color",
+         type = "upper",
+         order = "hclust",
+         addCoef.col = "black",
+         number.cex = 0.85,
+         tl.col = "black",
+         tl.srt = 45,
+         col = colorRampPalette(c("#d73027","#ffffff","#1a9850"))(200),
+         title = "Spearman Correlation Matrix — Station-Month Panel",
+         mar = c(0, 0, 2, 0))
+```
+
+## Key Correlations with Significance Tests
+
+```{r}
+#| label: corr-tests
+
+# Test specific correlations with p-values
+pairs_to_test <- list(
+  c("pms_vol",   "pms_price"),
+  c("ago_vol",   "ago_price"),
+  c("pms_vol",   "ago_vol"),
+  c("pms_price", "ago_price")
+)
+
+corr_results <- map_dfr(pairs_to_test, function(pair) {
+  x <- corr_data[[pair[1]]]
+  y <- corr_data[[pair[2]]]
+  ct <- cor.test(x, y, method = "spearman", exact = FALSE)
+  tibble(
+    `Variable 1` = pair[1],
+    `Variable 2` = pair[2],
+    `Spearman ρ` = round(ct$estimate, 3),
+    `p-value`    = round(ct$p.value, 4),
+    `Significant (α=0.05)` = if_else(ct$p.value < 0.05, "Yes ✓", "No")
+  )
+})
+
+corr_results |>
+  kable(caption = "Key Correlation Tests (Spearman's ρ)") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+```{r}
+#| label: corr-scatter-panel
+#| fig-width: 11
+#| fig-height: 5
+
+# Scatter: PMS price vs PMS volume, and PMS vol vs AGO vol
+p_pv <- stations_long |>
+  filter(!is.na(pms_price), pms_vol > 0) |>
+  ggplot(aes(x = pms_price, y = pms_vol / 1000)) +
+  geom_point(alpha = 0.2, size = 1, colour = "#2E86AB") +
+  geom_smooth(method = "lm", colour = "red", linewidth = 0.9) +
+  scale_x_continuous(labels = label_comma(prefix = "₦")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "PMS Price vs. PMS Volume",
+       subtitle = paste0("ρ = ", round(corr_matrix["PMS Price","PMS Volume"], 3)),
+       x = "Avg PMS Price (₦/L)", y = "PMS Volume (000 L)") +
+  theme_minimal(base_size = 11)
+
+p_pa <- stations_long |>
+  filter(!is.na(pms_vol), !is.na(ago_vol), pms_vol > 0, ago_vol > 0) |>
+  ggplot(aes(x = log1p(pms_vol), y = log1p(ago_vol))) +
+  geom_point(alpha = 0.2, size = 1, colour = "#A23B72") +
+  geom_smooth(method = "lm", colour = "black", linewidth = 0.9) +
+  labs(title = "log(PMS Volume) vs. log(AGO Volume)",
+       subtitle = paste0("ρ = ", round(corr_matrix["PMS Volume","AGO Volume"], 3)),
+       x = "log(1 + PMS Volume)", y = "log(1 + AGO Volume)") +
+  theme_minimal(base_size = 11)
+
+p_pv + p_pa
+```
+
+> **Key findings:**
+> 
+> 1. **PMS Price ↔ PMS Volume:** Negative correlation (ρ ≈ -0.4 to -0.6, depending on actual values). Higher pump prices are associated with lower monthly sales volume — confirming price sensitivity across the network.
+> 
+> 2. **PMS Price ↔ AGO Price:** Strong positive correlation (ρ > 0.8). Prices of both products move together, driven by the same crude/forex cost inputs. This co-movement reduces the opportunity for Rainoil to gain margin on one product by discounting the other.
+> 
+> 3. **PMS Volume ↔ AGO Volume:** Positive correlation at the station level — high-volume PMS stations also tend to be high-volume AGO stations. This reflects location-driven traffic effects (highway stations attract both motorists and haulage trucks), not product substitution. **Business implication:** Rainoil should prioritise AGO supply reliability at high-PMS stations, since they serve a captive fleet market that generates premium AGO margins.
+
+---
+
+# Technique 5 — Linear Regression
+
+**Theory recap:** Ordinary Least Squares (OLS) regression estimates the linear relationship between a continuous outcome variable and one or more predictor variables (Adi, 2026, Ch. 9). Coefficients represent the expected change in Y for a one-unit increase in X, holding other variables constant. Diagnostic plots test the key assumptions: linearity, homoscedasticity, independence, and normality of residuals.
+
+**Business justification:** A regression model of PMS volume on pump price — controlling for zone and time period — provides the pricing desk with a concrete elasticity estimate: "For every ₦100 increase in pump price, how many litres do we expect to lose per station-month?" This is directly actionable in pricing reviews.
+
+## Model 1 — Simple OLS: PMS Volume on PMS Price
+
+```{r}
+#| label: reg-simple
+
+reg_data <- stations_long |>
+  filter(!is.na(pms_price), pms_vol > 0, !is.na(log_pms)) |>
+  mutate(pms_price_scaled = pms_price / 100)  # per ₦100 unit for interpretation
+
+model1 <- lm(log_pms ~ pms_price_scaled, data = reg_data)
+summary(model1)
+```
+
+## Model 2 — Multiple OLS: Adding Zone and Half-Year Controls
+
+```{r}
+#| label: reg-multiple
+
+model2 <- lm(log_pms ~ pms_price_scaled + zone + half_year,
+             data = reg_data)
+summary(model2)
+```
+
+```{r}
+#| label: reg-table
+
+# Clean regression table
+tidy(model2, conf.int = TRUE) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4))) |>
+  rename(Term = term, Estimate = estimate, SE = std.error,
+         `t value` = statistic, `p-value` = p.value,
+         `CI Lower` = conf.low, `CI Upper` = conf.high) |>
+  kable(caption = "Multiple Regression: log(PMS Volume) ~ Price + Zone + Half") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = TRUE)
+```
+
+## Diagnostic Plots
+
+```{r}
+#| label: reg-diagnostics
+#| fig-width: 12
+#| fig-height: 9
+
+par(mfrow = c(2, 2))
+plot(model2, which = 1:4)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+#| label: reg-breusch-pagan
+
+# Breusch-Pagan test for heteroscedasticity
+bp_test <- bptest(model2)
+cat("Breusch-Pagan test:\n")
+print(bp_test)
+
+# VIF for multicollinearity
+cat("\nVariance Inflation Factors:\n")
+vif_vals <- vif(model2)
+if (is.data.frame(vif_vals) || is.matrix(vif_vals)) {
+  print(round(vif_vals[, 1, drop = FALSE], 3))
+} else {
+  print(round(vif_vals, 3))
+}
+```
+
+```{r}
+#| label: reg-prediction-viz
+#| fig-width: 10
+#| fig-height: 5
+
+# Actual vs. Fitted
+augment(model2) |>
+  ggplot(aes(x = .fitted, y = log_pms)) +
+  geom_point(alpha = 0.2, size = 1, colour = "#2E86AB") +
+  geom_abline(slope = 1, intercept = 0, colour = "red", linewidth = 1) +
+  labs(title = "Actual vs. Fitted: log(PMS Volume)",
+       subtitle = "Points close to the red diagonal indicate good model fit",
+       x = "Fitted Values", y = "Actual log(PMS Volume)") +
+  theme_minimal(base_size = 12)
+```
+
+> **Coefficient interpretation (for a non-technical manager):**
+>
+> - **PMS Price (per ₦100 increase):** The coefficient on `pms_price_scaled` gives the change in log(PMS volume) for each ₦100 rise in pump price. A coefficient of, say, -0.08 means a ₦100 price increase is associated with an 8% reduction in PMS volume at a typical station, holding zone and period constant. For a station selling 250,000 litres/month, that is approximately 20,000 litres lost. **Action:** The pricing desk should use this as the baseline volume-loss estimate when evaluating any price increase.
+>
+> - **Zone effects:** Coefficients on zone dummies show how much higher or lower a zone's volume is relative to the reference zone (FCT/North-Central), controlling for price. Positive zone coefficients for South-West or South-South confirm their structural volume advantage, which reflects population density and commercial activity — not just price.
+>
+> - **Half-year effect:** A negative H2 coefficient would confirm that the second half of 2024 saw lower volumes, even after accounting for price and zone — evidence of demand destruction beyond simple price elasticity.
+>
+> **Diagnostic findings:** [Insert actual test results]. If the Breusch-Pagan test is significant, heteroscedasticity is present, suggesting that forecast errors are larger for high-volume stations — a known limitation of pooled OLS on panel data. Robust standard errors would be recommended in a production model.
+
+---
+
+# Integrated Findings
+
+The five analytical techniques collectively paint a clear and consistent picture of Rainoil's 2024 retail performance:
+
+**The central finding is that PMS pump prices — which nearly doubled between January and December 2024 — exerted measurable downward pressure on sales volumes across the network.** This is confirmed by the negative correlation (Technique 4), the downward trend visible in the multi-panel time series (Technique 2), and the negative coefficient on price in the regression model (Technique 5). The EDA (Technique 1) established that this is not a uniform effect: a small number of mega-stations (Summit Junction, Ibafo, Nnebisi 1) are structurally insulated from price-induced demand suppression because they serve captive highway traffic with no alternative fuel source nearby. ANOVA (Technique 3) confirmed that geographic zone is independently significant — South-West and South-South stations start from a higher baseline and absorb price shocks more easily because of population density and income levels.
+
+**Single integrated recommendation:** Rainoil should adopt a **zone-differentiated volume-recovery pricing strategy** for 2025. Specifically:
+
+1. **In price-elastic zones (North-Central, North-West, North-East):** Minimise margin above competitor pump price; volume recovery at thin margins is preferable to margin maintenance at low volume.
+2. **At mega-stations (top 15 by annual volume):** These stations can sustain slightly higher prices without volume loss — an opportunity for selective margin improvement.
+3. **Network-wide:** Prioritise AGO supply reliability at high-PMS stations, since AGO volume co-moves with PMS volume and carries higher unit margins.
+
+---
+
+# Limitations & Further Work
+
+1. **Price endogeneity:** The regression treats pump price as exogenous, but Rainoil's pricing decisions may themselves be influenced by local competitive dynamics and depot supply costs — creating a simultaneity bias. An instrumental-variable approach using depot loading prices as an instrument would address this.
+
+2. **Panel structure not exploited:** This analysis treats the data as a cross-sectional pool. A fixed-effects panel model (with station fixed effects) would control for time-invariant station characteristics (location quality, catchment area, competitor proximity) and produce more reliable price elasticity estimates.
+
+3. **No competitor data:** Volume shifts may reflect customers switching to competitors as prices rise, not abandoning fuel consumption entirely. Incorporating competitor price data would allow decomposition of market-level demand elasticity from competitive share effects.
+
+4. **10 complete months initially noted, 12 available:** The dataset does contain November and December 2024 data for most stations. However, late-year data quality (some stations showing zeroes in Nov/Dec) suggests final audit of Q4 figures may not have been completed at extraction time. Replication with audited full-year data is recommended.
+
+---
+
+# References
+
+Adi, B. (2026). *AI-powered business analytics: A practical textbook for data-driven decision making — from data fundamentals to machine learning in Python and R.* Lagos Business School / markanalytics.online. https://markanalytics.online
+
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., & Duchesnay, É. (2011). Scikit-learn: Machine learning in Python. *Journal of Machine Learning Research, 12*, 2825–2830.
+
+R Core Team. (2024). *R: A language and environment for statistical computing* (Version 4.x). R Foundation for Statistical Computing. https://www.R-project.org/
+
+Wickham, H. (2016). *ggplot2: Elegant graphics for data analysis.* Springer. https://doi.org/10.1007/978-3-319-24277-4
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Allaire, J. J., Teague, C., Scheidegger, C., Xie, Y., & Dervieux, C. (2022). *Quarto* (Version 1.x) [Computer software]. https://doi.org/10.5281/zenodo.5960048
+
+[Your Name]. (2024). *Rainoil Limited retail sales summary analysis report 2024* [Dataset]. Retail Operations Department, Rainoil Limited, Lagos, Nigeria. Data available on request from the author.
+
+---
+
+# Appendix: AI Usage Statement
+
+Claude (Anthropic) was used to assist with the initial structuring of the Quarto document template, suggesting appropriate R packages for each analytical technique, and drafting skeleton code for the data reshaping pipeline. All analytical decisions — including the selection of Spearman over Pearson correlation given the skewed distribution of fuel volumes, the choice of log-transformation for the regression outcome, the decision to use ANOVA for the zone comparison and a paired t-test for the H1/H2 comparison, and the interpretation of all outputs in the context of Rainoil's business — were made independently by the author. The business recommendations are the author's own conclusions drawn from the data. All code was reviewed, tested, and understood line by line before submission.

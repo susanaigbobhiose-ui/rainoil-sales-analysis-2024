@@ -19,9 +19,9 @@ execute:
 
 # Executive Summary
 
-Nigeria's downstream petroleum sector is characterised by price volatility and wide regional disparities in fuel demand. Rainoil Limited operates one of the largest retail fuel networks in Nigeria, with stations spanning all geopolitical zones. This study analyses 2024 monthly sales data — covering **144 active retail stations** across **12 months** — to answer a critical commercial question: *do pump price variations across stations and over time significantly explain differences in PMS (petrol) and AGO (diesel) sales volumes, and which station characteristics are associated with top performance?*
+Nigeria's downstream petroleum sector is characterised by price volatility and wide regional disparities in fuel demand. Rainoil Limited operates one of the largest indigenous retail fuel networks in Nigeria, with stations spanning all geopolitical zones. This study analyses 2024 monthly sales data — covering **144 active retail stations** across **12 months** — to answer a critical commercial question: *do pump price variations across stations and over time significantly explain differences in PMS (petrol) and AGO (diesel) sales volumes, and which station characteristics are associated with top performance?*
 
-Using five analytical techniques — Exploratory Data Analysis, Data Visualisation, Hypothesis Testing, Correlation Analysis, and Linear Regression — this report finds that: (1) sales volumes are highly right-skewed, with a small cluster of mega-stations (e.g. Summit Junction, Ibafo) accounting for a disproportionate share of national volume; (2) PMS volumes declined notably in Q3 2024 before recovering in Q4, consistent with the fuel subsidy removal price shock; (3) South-West and South-South zones significantly out-sell the North in PMS volume (ANOVA, p < 0.05); (4) PMS price is negatively correlated with PMS volume, confirming price sensitivity; and (5) a ₦100 increase in average PMS pump price is associated with approximately 18,000–22,000 fewer litres sold per station-month. The primary recommendation is for Rainoil's commercial team to implement zone-differentiated pricing floors that balance margin protection with volume retention, particularly in price-elastic northern markets.
+Using five analytical techniques — Exploratory Data Analysis, Data Visualisation, Hypothesis Testing, Correlation Analysis, and Linear Regression — this report finds that: (1) sales volumes are highly right-skewed, with a small cluster of mega-stations (e.g. Summit Junction, Ibafo) accounting for a disproportionate share of national volume; (2) PMS volumes declined notably in Q3 2024 before recovering in Q4, consistent with the fuel subsidy removal price shock; (3) South-West and South-South zones significantly out-sell the North in PMS volume (ANOVA, p < 0.05); (4) PMS price is negatively correlated with PMS volume, confirming price sensitivity; and (5) a ₦100 increase in average PMS pump price is associated with approximately 18,000–22,000 fewer litres sold per station-month. The primary recommendation is for Rainoil's retail team to implement zone-differentiated pricing floors that balance margin protection with volume retention, particularly in price-elastic northern markets.
 
 ---
 
@@ -105,8 +105,8 @@ for (m in months_abbr) {
 
 # ── 2. Read skipping the 4 header rows; row 5 onward is data ──
 raw <- read_excel(
-  "2024_Sales.xlsx",
-  sheet    = "MOM Station Sale",
+  "Retail_Sales_(2024_2025).xlsx",
+  sheet    = "2024 MOM Station Sale",
   col_names = FALSE,
   skip     = 4,        # skip 2 title rows + 2 header rows
   col_types = "text"   # read everything as text first to avoid parse errors

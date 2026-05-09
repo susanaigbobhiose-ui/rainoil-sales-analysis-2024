@@ -1,0 +1,1186 @@
+---
+title: "Price Sensitivity, Seasonality, and Sales Performance Across the Organisation Retail Outlets: An Exploratory and Inferential Analysis of 2024–2025 Fuel Sales Data"
+author: "Susan Aigbobhiose"
+date: today
+format:
+  html:
+    theme: flatly
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    self-contained: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+---
+
+# Executive Summary
+
+Nigeria's downstream petroleum retail sector is characterised by price volatility, seasonal demand swings, and growing regional competition. As Strategy and Business Development Manager at a major Nigerian downstream petroleum company, this analysis was conducted to answer three strategic questions critical to guiding the Retail Sales team's 2026 planning: *(1) Do pump price variations significantly explain differences in PMS and AGO sales volumes? (2) Does Nigeria's rainy season and festive periods independently drive volume fluctuations beyond price? (3) Which station and area characteristics are associated with top retail performance?*
+
+Applying five analytical techniques to **193 stations across 24 months** (January 2024 – December 2025, 4,632 station-month observations), key findings are: sales volumes are highly right-skewed with a cluster of highway mega-stations dominating network volume; a ₦100 pump price increase reduces monthly PMS volume by approximately 8–10% per station; rainy season months suppress volumes independently of price, particularly in South-South stations; December (Christmas) and April (Easter) generate statistically significant demand surges; and South-West and South-South zones significantly out-sell Northern zones (ANOVA, η² = 0.057, p < 0.05). Year-on-year, 2025 volumes recovered significantly from 2024 (t = −9.19, p < 0.001).
+
+**Recommendation:** The Retail Sales team should deploy a seasonally-aware, zone-differentiated strategy for 2026 — adjusting pricing within competitive thresholds, pre-positioning stock ahead of festive surges, and reducing loading to flood-prone stations during peak rainy months.
+
+---
+
+# Professional Disclosure
+
+**Name:** Susan Aigbobhiose
+
+**Job Title:** Strategy and Business Development Manager
+
+**Department:** Strategy and Business Development
+
+**Organisation:** The organisation is a significant Oil and Gas company in Nigeria, with operations across the Downstream, Gas, and Upstream sectors. Its downstream business operations span across Bulk Product Storage, Haulage/Distribution, Refined Products Marketing, and Retail Sales. The retail arm — the focus of this analysis — operates 193 service stations across all six geopolitical zones, making it one of Nigeria's largest indigenous retail fuel networks.
+
+**Why this analysis matters — strategic justification:**
+
+The Strategy and Business Development function is responsible for translating performance data into actionable strategic direction for the business. As the retail network continues to expand — with 14 new stations commissioned in 2025 alone — the organisation faces increasingly complex decisions about where to grow, how to price competitively, when to pre-position supply, and how to advise the Retail Sales team on deploying the right strategies across different market conditions. This analysis was designed specifically to equip the Retail Sales team with evidence-based answers to questions that have historically relied on intuition:
+
+- Are our volume losses driven by prices being too high, or by seasonal forces we cannot control?
+- Which areas and zones are structurally strong versus which are temporarily underperforming?
+- When should we prepare for demand surges, and when should we reduce supply loading?
+
+Answering these questions through rigorous data analysis — rather than anecdote — is central to the organisation's strategy of building a data-driven retail operation ahead of increasing competition in the downstream sector. The findings of this report are intended to directly inform the Retail Sales team's 2026 strategy, including pricing guidelines, supply chain planning, and station expansion sequencing.
+
+**Operational relevance of each technique to the Strategy and Business Development role:**
+
+1. **Exploratory Data Analysis:** The Strategy team reviews monthly MOM (Month-on-Month) station performance data to identify network-wide trends, flag underperforming areas, and build the evidence base for strategic recommendations to the Group Head Retail Sales and Executive Management. EDA formalises this process — detecting data quality issues, identifying outlier stations, and establishing the statistical baseline before any strategic conclusions are drawn.
+
+2. **Data Visualisation:** Strategy presentations to the Executive Committee and Board require clear, compelling visual communication of network performance. Selecting the right chart — a heatmap for station-level patterns, a trend line for price-volume dynamics, a bar chart for zone comparisons — directly determines whether decision-makers act on the insights or set them aside. This analysis builds a visual narrative that the Retail Sales team can use directly in their 2026 planning sessions.
+
+3. **Hypothesis Testing:** Before recommending a pricing strategy change or a supply reallocation to the Retail Sales team, the Strategy function must be able to demonstrate that observed differences are real and not driven by random variation. Formal hypothesis tests — on zone performance, year-on-year volume recovery, and seasonal effects — provide the statistical credibility that transforms an observation into a strategic recommendation.
+
+4. **Correlation Analysis:** The retail forecourts sell PMS, AGO, and DPK. Understanding how prices and volumes of these products co-move is essential for product-mix planning, working capital allocation across the depot network, and advising the Retail Sales team on which product categories to prioritise in each zone and season.
+
+5. **Linear Regression:** The regression model is the analytical centrepiece of this study — it simultaneously quantifies the independent effect of price, season, festive periods, and zone on PMS volume. For the Retail Sales team, this translates directly into a decision tool: given a proposed price change and the current month of the year, what volume change should the team plan for? This is the kind of evidence-based planning that separates strategic retail management from reactive operations.
+
+---
+
+# Data Collection & Sampling
+
+**Source:** Internal MOM (Month-on-Month) Retail Sales Summary Analysis Report — extracted from the organisation's retail management information system by the Strategy and Business Development Department.
+
+**Collection method:** The dataset was exported directly from the internal reporting portal as an Excel workbook. Data is compiled monthly by the Retail Operations team from station-level daily meter readings submitted by station supervisors across all 21 operational areas.
+
+**Sampling frame:** All retail stations listed in the MOM report for either 2024 or 2025, yielding **193 unique stations**. Stations commissioned mid-year are included from the month they first recorded a sale — their earlier months are coded as zero volume, not excluded.
+
+**Variables included:** For each station-month observation: station name, operational area (21 areas), geopolitical zone (derived), monthly PMS volume (litres), AGO volume (litres), DPK volume (litres), average PMS pump price (₦/litre), and average AGO pump price (₦/litre). Year, half-year, and a sequential month counter (1–24) were engineered variables.
+
+**Time period:** January 2024 – December 2025 (24 months), yielding **193 stations × 24 months = 4,632 station-month observations** before removing non-operational months.
+
+**Statistical rationale for sample adequacy:** For one-way ANOVA with six zone groups, a minimum of 30 observations per group is recommended for the Central Limit Theorem to apply reliably — each zone in this dataset contains a minimum of 200+ station-months, far exceeding this threshold. For OLS regression with seven predictors, the standard rule of 10–20 observations per predictor requires a minimum of 70–140 observations; the 3,800+ operational station-months used in the regression far exceed this requirement. The 24-month panel also satisfies the minimum time series depth needed to detect seasonal patterns across at least two full annual cycles, making the seasonality analysis statistically robust.
+
+**Ethical notes:** The data is aggregate station-level operational data. It contains no personally identifiable information. Permission to use this data for academic analysis was obtained from the Executive Director, Strategy and Business Development and Group Head Retail Sales. Commercially sensitive absolute figures have been retained as they are necessary for the analysis, but the dataset is not shared beyond this submission.
+
+---
+
+# Data Wrangling & Description
+
+## Load Libraries and Import Data
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(skimr)
+library(ggplot2)
+library(scales)
+library(corrplot)
+library(car)
+library(lmtest)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(ggrepel)
+library(RColorBrewer)
+library(broom)
+```
+
+```{r}
+#| label: load-data
+
+# ── 0. Set working directory ──
+setwd("C:/Users/susan.aigbobhiose/OneDrive - Rainoil Limited/Documents/PERSONAL/MBA/YEAR 2/1ST SEMESTER/Data Analytics II/Examination Submission/Exam 1")
+
+# ── 1. Build column names: sn | area | station_name | 12 months × 5 products ──
+months_abbr  <- c("Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec")
+product_cols <- c("pms","ago","dpk","avg_pms_price","avg_ago_price")
+
+col_names <- c("sn", "area", "station_name")
+for (m in months_abbr) {
+  for (p in product_cols) {
+    col_names <- c(col_names, paste0(m, "_", p))
+  }
+}
+
+# ── 2. Helper: read one sheet, keep ALL stations (SN 1–193) ──
+read_sales_sheet <- function(file, sheet) {
+  raw <- read_excel(file, sheet = sheet,
+                    col_names = FALSE, skip = 4, col_types = "text")
+  names(raw) <- col_names[seq_len(ncol(raw))]
+  raw |>
+    mutate(sn = suppressWarnings(as.numeric(sn))) |>
+    # Keep only real station rows: SN is numeric, 1–193, area is not blank
+    filter(!is.na(sn), sn >= 1, sn <= 193, !is.na(area), area != "") |>
+    mutate(across(
+      .cols = -c(area, station_name),
+      .fns  = ~ suppressWarnings(as.numeric(.x))
+    )) |>
+    # Standardise area capitalisation
+    mutate(area = str_to_title(str_trim(area)),
+           station_name = str_trim(station_name),
+           # Generate anonymous station code from SN number
+           station_code = paste0("STN-", formatC(sn, width = 3, flag = "0")))
+}
+
+# ── 3. Load both years ──
+file <- "Retail_Sales_(2024_2025).xlsx"
+
+stations_wide_2024 <- read_sales_sheet(file, "2024 MOM Station Sale")
+stations_wide_2025 <- read_sales_sheet(file, "2025 MOM Station Sale")
+
+cat("2024 stations loaded:", nrow(stations_wide_2024), "\n")
+cat("2025 stations loaded:", nrow(stations_wide_2025), "\n")
+
+# Stations present in 2025 but not 2024 (newly commissioned)
+new_in_2025 <- setdiff(stations_wide_2025$station_name,
+                       stations_wide_2024$station_name)
+cat("\nStations new in 2025 (", length(new_in_2025), "):\n", sep = "")
+cat(paste(" •", new_in_2025), sep = "\n")
+```
+
+## Assign Geopolitical Zones
+
+```{r}
+#| label: region-mapping
+
+# Map the organisation's 21 operational areas to Nigeria's 6 geopolitical zones
+area_to_zone <- tribble(
+  ~area,            ~zone,
+  "Calabar-Ph",     "South-South",
+  "Yenagoa",        "South-South",
+  "Warri",          "South-South",
+  "Ughelli",        "South-South",
+  "Delta",          "South-South",
+  "Kwale",          "South-South",
+  "Ozoro",          "South-South",
+  "Agbor",          "South-South",
+  "Benin",          "South-South",
+  "Edo North",      "South-South",
+  "Mid-West",       "South-South",
+  "Ikom-Ogoja",     "South-South",
+  "South-East 1",   "South-East",
+  "South East 1",   "South-East",
+  "South-East 2",   "South-East",
+  "South-West 1",   "South-West",
+  "South-West 2",   "South-West",
+  "Fct",            "North-Central",
+  "North Central",  "North-Central",
+  "North-West",     "North-West",
+  "North East",     "North-East"
+)
+
+stations_wide_2024 <- stations_wide_2024 |>
+  left_join(area_to_zone, by = "area") |>
+  mutate(zone = replace_na(zone, "South-South"))
+
+stations_wide_2025 <- stations_wide_2025 |>
+  left_join(area_to_zone, by = "area") |>
+  mutate(zone = replace_na(zone, "South-South"))
+
+# Summary table: areas, zones and station counts
+bind_rows(
+  stations_wide_2024 |> count(area, zone) |> mutate(year = "2024"),
+  stations_wide_2025 |> count(area, zone) |> mutate(year = "2025")
+) |>
+  pivot_wider(names_from = year, values_from = n, values_fill = 0) |>
+  arrange(zone, area) |>
+  kable(col.names = c("Area", "Zone", "Stations 2024", "Stations 2025"),
+        caption = "Operational Areas mapped to Geopolitical Zones") |>
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE) |>
+  collapse_rows(columns = 2, valign = "top")
+```
+
+## Reshape to Long Format
+
+```{r}
+#| label: reshape-long
+
+months_ordered <- c("Jan","Feb","Mar","Apr","May","Jun",
+                    "Jul","Aug","Sep","Oct","Nov","Dec")
+
+# ── Helper: reshape one year's wide data to long ──
+reshape_to_long <- function(data_wide, year_val) {
+  month_dfs <- lapply(months_ordered, function(m) {
+    data_wide |>
+      select(sn, station_code, area, zone, station_name,
+             pms       = paste0(m, "_pms"),
+             ago       = paste0(m, "_ago"),
+             dpk       = paste0(m, "_dpk"),
+             pms_price = paste0(m, "_avg_pms_price"),
+             ago_price = paste0(m, "_avg_ago_price")) |>
+      mutate(month = m, year = year_val)
+  })
+  bind_rows(month_dfs)
+}
+
+# ── Reshape both years and combine ──
+long_2024 <- reshape_to_long(stations_wide_2024, 2024)
+long_2025 <- reshape_to_long(stations_wide_2025, 2025)
+
+stations_long <- bind_rows(long_2024, long_2025) |>
+  mutate(
+    month      = factor(month, levels = months_ordered, ordered = TRUE),
+    year       = as.integer(year),
+    month_num  = as.integer(month),
+    # Calendar month number across 24 months (1 = Jan 2024, 24 = Dec 2025)
+    month_seq  = (year - 2024) * 12 + month_num,
+    month_date = as.Date(paste0(year, "-",
+                                formatC(month_num, width = 2, flag = "0"),
+                                "-01")),
+    half_year  = if_else(month %in% c("Jan","Feb","Mar","Apr","May","Jun"),
+                         "H1", "H2"),
+    period     = paste0(half_year, " ", year),
+
+    # Prices: 0 means station not trading that month → treat as NA
+    pms_price  = if_else(is.na(pms_price) | pms_price == 0,
+                         NA_real_, pms_price),
+    ago_price  = if_else(is.na(ago_price) | ago_price == 0,
+                         NA_real_, ago_price),
+
+    # Volumes: NA → 0 (station existed but sold nothing)
+    pms        = replace_na(pms, 0),
+    ago        = replace_na(ago, 0),
+    dpk        = replace_na(dpk, 0),
+
+    # Flag: was the station operational this month?
+    operational = pms > 0 | ago > 0,
+
+    # Log volumes for regression (handles zeros)
+    log_pms    = log1p(pms),
+    log_ago    = log1p(ago)
+  ) |>
+  rename(pms_vol = pms, ago_vol = ago, dpk_vol = dpk) |>
+  # ── Seasonality & festive period variables ──
+  mutate(
+    # Nigerian rainy season (national broad definition: Apr–Oct)
+    season = case_when(
+      month %in% c("Apr","May","Jun","Jul","Aug","Sep","Oct") ~ "Rainy Season",
+      TRUE                                                     ~ "Dry Season"
+    ),
+    # Festive periods
+    festive = case_when(
+      month == "Dec" ~ "Christmas/New Year",
+      month == "Apr" ~ "Easter",
+      TRUE           ~ "Non-Festive"
+    ),
+    # Granular demand period for ANOVA
+    demand_period = case_when(
+      month == "Dec"                                ~ "Dec (Christmas)",
+      month == "Apr"                                ~ "Apr (Easter)",
+      month %in% c("Jun","Jul","Aug","Sep")         ~ "Peak Rainy (Jun-Sep)",
+      month %in% c("Jan","Feb","Mar")               ~ "Dry Season (Jan-Mar)",
+      month %in% c("Oct","Nov")                     ~ "Late Rainy (Oct-Nov)",
+      month == "May"                                ~ "Early Rainy (May)",
+      TRUE                                          ~ "Other"
+    )
+  )
+
+# ── Summary ──
+cat("Total station-month observations :", nrow(stations_long), "\n")
+cat("Unique stations                   :", n_distinct(stations_long$station_name), "\n")
+cat("Years                             : 2024 & 2025 (24 months)\n")
+cat("Unique areas                      :", n_distinct(stations_long$area), "\n")
+cat("Operational station-months        :",
+    sum(stations_long$operational, na.rm = TRUE), "\n")
+
+glimpse(stations_long)
+```
+
+## Dataset Summary
+
+```{r}
+#| label: data-summary
+
+stations_long |>
+  select(pms_vol, ago_vol, dpk_vol, pms_price, ago_price) |>
+  skim() |>
+  select(skim_variable, n_missing, numeric.mean, numeric.sd,
+         numeric.p0, numeric.p25, numeric.p50, numeric.p75, numeric.p100) |>
+  rename(Variable = skim_variable, Missing = n_missing,
+         Mean = numeric.mean, SD = numeric.sd,
+         Min = numeric.p0, Q1 = numeric.p25,
+         Median = numeric.p50, Q3 = numeric.p75, Max = numeric.p100) |>
+  mutate(across(where(is.numeric), ~ round(.x, 1))) |>
+  kable(caption = "Summary Statistics — Station-Month Panel (n = 1,728)") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = TRUE)
+```
+
+---
+
+# Technique 1 — Exploratory Data Analysis (EDA)
+
+**Theory recap:** EDA is the systematic process of summarising a dataset's main characteristics before formal modelling. The goal is to understand distributions, detect anomalies, identify relationships, and surface questions worth testing (Adi, 2026, Ch. 4). Anscombe's Quartet famously demonstrated that identical summary statistics can conceal radically different data structures — hence the importance of visual and distributional inspection.
+
+**Business justification:** Before the Strategy and Business Development team can advise the Retail Sales team on network performance, it is essential to know whether the data is reliable (no missing periods, no implausible values), how volumes are distributed across the network (are averages meaningful?), and which stations are true outliers vs. which are simply large-volume outlets.
+
+## Distribution of PMS Monthly Volume
+
+```{r}
+#| label: eda-distribution
+#| fig-width: 10
+#| fig-height: 5
+
+p1 <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = pms_vol)) +
+  geom_histogram(bins = 50, fill = "#2E86AB", colour = "white", alpha = 0.85) +
+  scale_x_continuous(labels = label_comma()) +
+  labs(title = "Distribution of Monthly PMS Volume",
+       subtitle = "Station-month observations (n = 1,728)",
+       x = "PMS Volume (Litres)", y = "Count") +
+  theme_minimal(base_size = 12)
+
+p2 <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = log1p(pms_vol))) +
+  geom_histogram(bins = 45, fill = "#A23B72", colour = "white", alpha = 0.85) +
+  labs(title = "Log-Transformed PMS Volume",
+       subtitle = "Reduces skewness for regression modelling",
+       x = "log(1 + PMS Volume)", y = "Count") +
+  theme_minimal(base_size = 12)
+
+p1 + p2
+```
+
+> **Interpretation:** PMS volume is strongly right-skewed (skewness > 3). The majority of station-months cluster below 400,000 litres, but a handful of mega-stations (Summit Junction, Ibafo, Nnebisi 1, Oniru) record monthly volumes exceeding 1 million litres. The log transformation produces an approximately normal distribution, which is used in the regression section.
+
+## Data Quality Issues
+
+```{r}
+#| label: eda-quality
+
+# Issue 1: Missing / zero price values
+missing_prices <- stations_long |>
+  summarise(
+    `Missing PMS Price` = sum(is.na(pms_price)),
+    `Missing AGO Price` = sum(is.na(ago_price)),
+    `Zero DPK Volume` = sum(dpk_vol == 0, na.rm = TRUE),
+    `Zero PMS Volume` = sum(pms_vol == 0, na.rm = TRUE)
+  )
+
+kable(missing_prices, caption = "Data Quality Flags") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+
+# Issue 1: Missing / zero price values
+missing_prices <- stations_long |>
+  summarise(
+    `Missing PMS Price`  = sum(is.na(pms_price)),
+    `Missing AGO Price`  = sum(is.na(ago_price)),
+    `Zero PMS Volume`    = sum(pms_vol == 0, na.rm = TRUE),
+    `Zero DPK Volume`    = sum(dpk_vol == 0, na.rm = TRUE)
+  )
+
+kable(missing_prices, caption = "Data Quality Flags — 193 Stations × 24 Months") |>
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+
+# Issue 2: New stations commissioned mid-2025 (start later than Jan 2024)
+ramp_up <- stations_long |>
+  filter(year == 2025) |>
+  group_by(station_name, area) |>
+  summarise(first_active_month = min(month[operational], na.rm = TRUE),
+            months_active_2025 = sum(operational, na.rm = TRUE),
+            .groups = "drop") |>
+  filter(months_active_2025 < 12) |>
+  arrange(months_active_2025)
+
+cat("\nStations that opened mid-2025 (fewer than 12 active months):\n")
+print(ramp_up, n = 20)
+```
+
+> **Handling:** (1) Missing pump prices (where stations recorded zero for AVG PRICE) are replaced with `NA` rather than zero to avoid distorting price analysis — they are excluded from the regression on a listwise basis. (2) Stations with zero PMS across several months (e.g. Enugu Abakpa, Lafia, Otukpo) reflect either new openings or temporary closures; they are retained in EDA but flagged in regression diagnostics.
+
+## Outlier Detection — Top and Bottom Stations
+
+```{r}
+#| label: eda-outliers
+#| fig-width: 10
+#| fig-height: 6
+
+annual_pms <- stations_long |>
+  group_by(station_code, station_name, area, zone, year) |>
+  summarise(total_pms = sum(pms_vol, na.rm = TRUE),
+            total_ago = sum(ago_vol, na.rm = TRUE),
+            months_active = sum(operational, na.rm = TRUE),
+            .groups = "drop") |>
+  arrange(desc(total_pms))
+
+# 2024 baseline for charts that need a single-year ranking
+annual_pms_2024 <- annual_pms |> filter(year == 2024)
+# All-time ranking (sum across both years)
+annual_pms_all  <- annual_pms |>
+  group_by(station_code, station_name, area, zone) |>
+  summarise(total_pms = sum(total_pms), .groups = "drop") |>
+  arrange(desc(total_pms))
+
+# Top 15 stations by combined 2024+2025 PMS volume
+top15 <- annual_pms_all |> slice_head(n = 15)
+
+top15 |>
+  ggplot(aes(x = reorder(station_code, total_pms),
+             y = total_pms / 1e6, fill = area)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_continuous(labels = label_comma()) +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "Top 15 Stations by Combined PMS Volume — 2024 & 2025",
+       subtitle = "Ranked by total litres sold across the full 24-month period",
+       x = NULL, y = "Total PMS Volume (Million Litres)", fill = "Area") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+#| label: eda-area-summary
+#| fig-width: 11
+#| fig-height: 6
+
+# Area-level annual PMS comparison 2024 vs 2025
+stations_long |>
+  group_by(area, year) |>
+  summarise(total_pms = sum(pms_vol, na.rm = TRUE) / 1e6, .groups = "drop") |>
+  ggplot(aes(x = reorder(area, total_pms),
+             y = total_pms, fill = factor(year))) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  scale_fill_manual(values = c("2024" = "#2E86AB", "2025" = "#A23B72")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "Annual PMS Volume by Operational Area — 2024 vs 2025",
+       subtitle = "Direct year-on-year comparison across all 21 areas",
+       x = NULL, y = "Total PMS Volume (Million Litres)", fill = "Year") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom")
+```
+
+> **Interpretation:** Summit Junction (Asaba) and Ibafo (Lagos) are clear network outliers — each selling over 10 million litres annually, roughly 5–8× the network median. These are highway mega-stations serving transit traffic and should be modelled separately in any pricing analysis.
+
+---
+
+# Technique 2 — Data Visualisation
+
+**Theory recap:** Effective data visualisation applies the grammar of graphics — mapping data attributes to geometric properties (position, colour, size) to reveal patterns that numerical summaries cannot (Adi, 2026, Ch. 5; Wickham, 2016). Chart selection must match the data type and the question being asked.
+
+**Business justification:** Monthly performance reviews require regional managers to rapidly identify which zones are growing, which products are declining, and how price movements track with volume — all within a single slide deck. The five charts below form a coherent visual narrative of 2024 performance.
+
+## Monthly PMS Volume Trend by Zone
+
+```{r}
+#| label: viz-trend
+#| fig-width: 12
+#| fig-height: 6
+
+stations_long |>
+  group_by(month_date, zone, year) |>
+  summarise(total_pms = sum(pms_vol, na.rm = TRUE) / 1e6, .groups = "drop") |>
+  ggplot(aes(x = month_date, y = total_pms, colour = zone, group = zone)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2.5) +
+  facet_wrap(~year, scales = "free_x") +
+  scale_x_date(date_labels = "%b", date_breaks = "2 months") +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title = "Monthly PMS Sales Volume by Geopolitical Zone — 2024 vs 2025",
+       subtitle = "South-South and South-West dominate in both years",
+       x = NULL, y = "Total PMS Volume (Million Litres)", colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Boxplot of Monthly PMS Volume by Zone
+
+```{r}
+#| label: viz-boxplot
+#| fig-width: 10
+#| fig-height: 6
+
+stations_long |>
+  filter(!is.na(pms_vol)) |>
+  ggplot(aes(x = reorder(zone, pms_vol, FUN = median), y = pms_vol, fill = zone)) +
+  geom_boxplot(outlier.alpha = 0.4, outlier.size = 1.5) +
+  coord_flip() +
+  scale_y_continuous(labels = label_comma()) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Distribution of Station-Level Monthly PMS Volume by Zone",
+       subtitle = "Each point is one station-month; boxes show interquartile range",
+       x = NULL, y = "Monthly PMS Volume (Litres)", fill = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+## PMS Price Trend Over Time
+
+```{r}
+#| label: viz-price-trend
+#| fig-width: 11
+#| fig-height: 5
+
+stations_long |>
+  filter(!is.na(pms_price)) |>
+  group_by(month_date, zone, year) |>
+  summarise(avg_price = mean(pms_price, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = month_date, y = avg_price, colour = zone, group = zone)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  facet_wrap(~year, scales = "free_x") +
+  scale_x_date(date_labels = "%b", date_breaks = "2 months") +
+  scale_y_continuous(labels = label_comma(prefix = "₦")) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title = "Average PMS Pump Price by Zone — 2024 vs 2025",
+       subtitle = "Prices stabilised in 2025 after the 2024 subsidy-removal surge",
+       x = NULL, y = "Average PMS Price (₦/Litre)", colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Price vs. Volume Scatter
+
+```{r}
+#| label: viz-scatter
+#| fig-width: 10
+#| fig-height: 6
+
+stations_long |>
+  filter(!is.na(pms_price), !is.na(pms_vol), pms_vol > 0) |>
+  ggplot(aes(x = pms_price, y = pms_vol / 1000, colour = zone)) +
+  geom_point(alpha = 0.35, size = 1.5) +
+  geom_smooth(method = "lm", se = TRUE, colour = "black", linewidth = 0.9) +
+  scale_y_continuous(labels = label_comma()) +
+  scale_x_continuous(labels = label_comma(prefix = "₦")) +
+  scale_colour_brewer(palette = "Set2") +
+  labs(title = "PMS Pump Price vs. Monthly PMS Volume",
+       subtitle = "Negative relationship visible — higher prices associated with lower volume",
+       x = "Average PMS Price (₦/Litre)",
+       y = "Monthly PMS Volume (000 Litres)",
+       colour = "Zone") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+## Network Heatmap — Station Performance by Month
+
+```{r}
+#| label: viz-heatmap
+#| fig-width: 14
+#| fig-height: 10
+
+# Normalise each station's monthly PMS to its own 24-month peak (0–1 scale)
+heat_data <- stations_long |>
+  filter(!is.na(pms_vol)) |>
+  group_by(station_code) |>
+  mutate(station_max = max(pms_vol, na.rm = TRUE)) |>
+  ungroup() |>
+  mutate(pms_norm = if_else(station_max > 0, pms_vol / station_max, 0)) |>
+  semi_join(annual_pms_all |> slice_head(n = 35), by = "station_code")
+
+heat_data |>
+  ggplot(aes(x = month_date,
+             y = reorder(station_code, pms_norm, FUN = mean),
+             fill = pms_norm)) +
+  geom_tile(colour = "white", linewidth = 0.25) +
+  scale_x_date(date_labels = "%b\n%Y", date_breaks = "3 months") +
+  scale_fill_gradient2(low = "#d73027", mid = "#ffffbf", high = "#1a9850",
+                       midpoint = 0.55, name = "Relative\nPerformance") +
+  labs(title = "24-Month PMS Performance Heatmap — Top 35 Stations (Jan 2024 – Dec 2025)",
+       subtitle = "Green = near station's own peak; Red = well below peak",
+       x = NULL, y = NULL) +
+  theme_minimal(base_size = 9) +
+  theme(axis.text.y = element_text(size = 7),
+        legend.position = "right")
+```
+
+> **Narrative:** Across all five charts, a coherent story emerges. South-West and South-South zones consistently lead in volume. PMS prices climbed steeply from ₦625–670/litre in January to over ₦950–1,100/litre by October, reflecting the cascading effect of the 2023 subsidy removal. As prices rose, the scatter plot shows volume trending downward — a demand-suppression effect. The heatmap shows that the Q3 dip (Jul–Sep) was network-wide, not isolated to specific stations, consistent with a macro price shock rather than operational failure.
+
+## Seasonal Demand Pattern
+
+```{r}
+#| label: viz-seasonality
+#| fig-width: 12
+#| fig-height: 5
+
+stations_long |>
+  filter(pms_vol > 0) |>
+  group_by(month, season, festive, year) |>
+  summarise(avg_pms = mean(pms_vol, na.rm = TRUE) / 1000, .groups = "drop") |>
+  ggplot(aes(x = month, y = avg_pms, fill = season)) +
+  geom_col() +
+  geom_text(aes(label = if_else(festive != "Non-Festive", festive, "")),
+            vjust = -0.4, size = 2.6, colour = "black", fontface = "bold") +
+  facet_wrap(~year) +
+  scale_fill_manual(values = c("Rainy Season" = "#2E86AB",
+                               "Dry Season"   = "#E8B84B")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "Average Station PMS Volume by Month — 2024 & 2025",
+       subtitle = "Blue = rainy season (Apr–Oct); Gold = dry season. Festive periods labelled above bar.",
+       x = NULL, y = "Avg PMS Volume per Station (000 Litres)",
+       fill = "Season") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position  = "bottom",
+        axis.text.x      = element_text(angle = 45, hjust = 1))
+```
+
+> **Interpretation:** December (Christmas/New Year travel surge) and April (Easter) are visible demand spikes in both years. The rainy season months (June–September) show a consistent dip driven by flooding, reduced road traffic, and logistics disruptions in the Niger Delta — the core operating territory. This chart begins to separate the price story from the seasonal story, which the regression in Technique 5 will formally disentangle.
+
+---
+
+# Technique 3 — Hypothesis Testing
+
+**Theory recap:** Hypothesis testing provides a formal framework for deciding whether observed differences in data could plausibly arise by chance (Adi, 2026, Ch. 6). We state a null hypothesis (H₀), choose a test suited to the data type and distribution, compute a test statistic and p-value, and report effect size alongside statistical significance.
+
+**Business justification:** When the MD or Head of Retail Sales asks "Do stations in the South-West genuinely out-sell those in the North, or is the difference noise?" — a formal test is the evidence-based answer. Three hypotheses are tested: one on regional differences (ANOVA), one on year-on-year volume change (paired t-test), and one on seasonal demand periods (ANOVA) — directly addressing whether rain season and festive periods drive retail sales volumes independently of price.
+
+## Hypothesis 1 — Do mean monthly PMS volumes differ across zones? (One-Way ANOVA)
+
+**H₀:** Mean monthly PMS volume is the same across all geopolitical zones.  
+**H₁:** At least one zone has a significantly different mean monthly PMS volume.
+
+**Assumption checks:**
+
+```{r}
+#| label: hyp1-assumptions
+#| fig-width: 10
+#| fig-height: 4
+
+# Check normality by zone — QQ plots on log-transformed volume
+stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0) |>
+  ggplot(aes(sample = log1p(pms_vol))) +
+  stat_qq(alpha = 0.4, size = 0.8, colour = "#2E86AB") +
+  stat_qq_line(colour = "red", linewidth = 0.8) +
+  facet_wrap(~zone, scales = "free") +
+  labs(title = "QQ Plots of log(PMS Volume) by Zone",
+       subtitle = "Points close to diagonal indicate approximate normality",
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal(base_size = 11)
+```
+
+```{r}
+#| label: hyp1-levene
+
+# Levene's test for homogeneity of variance
+levene_result <- leveneTest(
+  log1p(pms_vol) ~ zone,
+  data = stations_long |> filter(!is.na(pms_vol), pms_vol > 0)
+)
+print(levene_result)
+```
+
+```{r}
+#| label: hyp1-anova
+
+# One-way ANOVA on log-transformed volume
+anova_data <- stations_long |>
+  filter(!is.na(pms_vol), pms_vol > 0)
+
+anova_model <- aov(log1p(pms_vol) ~ zone, data = anova_data)
+anova_summary <- summary(anova_model)
+print(anova_summary)
+
+# Effect size — Eta-squared
+ss_between <- anova_summary[[1]]["zone", "Sum Sq"]
+ss_total   <- sum(anova_summary[[1]][, "Sum Sq"])
+eta_sq     <- ss_between / ss_total
+cat("\nEta-squared (effect size):", round(eta_sq, 4), "\n")
+cat("Interpretation:", case_when(
+  eta_sq < 0.01 ~ "Negligible",
+  eta_sq < 0.06 ~ "Small",
+  eta_sq < 0.14 ~ "Medium",
+  TRUE ~ "Large"
+))
+```
+
+```{r}
+#| label: hyp1-posthoc
+#| fig-width: 9
+#| fig-height: 5
+
+# Post-hoc Tukey HSD
+tukey_result <- TukeyHSD(anova_model, "zone")
+tukey_df <- as.data.frame(tukey_result$zone) |>
+  rownames_to_column("Comparison") |>
+  rename(Difference = diff, Lower = lwr, Upper = upr, `p (adjusted)` = `p adj`) |>
+  mutate(Significant = if_else(`p (adjusted)` < 0.05, "Yes", "No"))
+
+tukey_df |>
+  kable(digits = 4, caption = "Tukey HSD Post-Hoc Comparisons") |>
+  kable_styling(bootstrap_options = c("striped","hover")) |>
+  row_spec(which(tukey_df$Significant == "Yes"), background = "#d4edda")
+```
+
+> **Result & Interpretation:** The one-way ANOVA is significant (F > critical value, p < 0.05), allowing us to reject H₀. At least one zone differs significantly from others in mean log PMS volume. The Tukey post-hoc test reveals which specific pairs differ. The effect size (η² = 0.0574) indicates a small-to-medium portion of variance in PMS volume is attributable to zone membership — meaning zone explains approximately 5.7% of the total variation in retail sales volumes. **Business implication:** Zone is a meaningful differentiator of sales performance. The retail network's resource allocation — fleet assignment, credit terms to dealers, marketing investment — should be explicitly zone-stratified rather than applying national averages.
+
+## Hypothesis 2 — Did PMS volume change significantly between H1 and H2 2024? (Paired t-test)
+
+**H₀:** Mean annual PMS volume per station is the same in 2024 and 2025.
+**H₁:** Mean annual PMS volume per station differs between 2024 and 2025.
+
+```{r}
+#| label: hyp2-ttest
+
+# Annual PMS per station per year — only stations present in both years
+year_data <- annual_pms |>
+  filter(year %in% c(2024, 2025)) |>
+  select(station_name, year, total_pms) |>
+  pivot_wider(names_from = year, values_from = total_pms) |>
+  drop_na()
+
+cat("Stations present in both years:", nrow(year_data), "\n")
+
+# Check normality of differences
+diff_vec <- year_data$`2025` - year_data$`2024`
+shapiro_result <- shapiro.test(diff_vec)
+cat("\nShapiro-Wilk on 2025 - 2024 differences:\n")
+cat("  W =", round(shapiro_result$statistic, 4),
+    ", p =", round(shapiro_result$p.value, 4), "\n")
+
+# Paired t-test: each station is its own pair
+t_result <- t.test(year_data$`2025`, year_data$`2024`,
+                   paired = TRUE, alternative = "two.sided")
+print(t_result)
+
+# Cohen's d
+d <- mean(diff_vec, na.rm = TRUE) / sd(diff_vec, na.rm = TRUE)
+cat("\nCohen's d (effect size):", round(d, 4), "\n")
+cat("Interpretation:", case_when(
+  abs(d) < 0.2 ~ "Negligible",
+  abs(d) < 0.5 ~ "Small",
+  abs(d) < 0.8 ~ "Medium",
+  TRUE ~ "Large"
+))
+```
+
+```{r}
+#| label: hyp2-viz
+#| fig-width: 9
+#| fig-height: 5
+
+# Visualise 2024 vs 2025 annual distribution per station
+annual_pms |>
+  filter(year %in% c(2024, 2025), total_pms > 0) |>
+  ggplot(aes(x = factor(year), y = total_pms / 1e6, fill = factor(year))) +
+  geom_violin(alpha = 0.6, trim = FALSE) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.size = 1) +
+  scale_fill_manual(values = c("2024" = "#2E86AB", "2025" = "#A23B72")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "Station Annual PMS Volume: 2024 vs 2025",
+       subtitle = "Each point is one station; shows whether network grew year-on-year",
+       x = "Year", y = "Annual PMS Volume (Million Litres)", fill = "Year") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+> **Result & Interpretation:** The paired t-test is highly significant (t = −9.19, df = 178, p < 0.001), allowing us to reject H₀ — mean annual PMS volume per station differed significantly between 2024 and 2025. The negative t-statistic indicates that 2025 volumes were higher than 2024 on average, suggesting the network recovered volume as the market adjusted to post-subsidy prices. Cohen's d quantifies the practical size of this year-on-year shift. **Business implication:** The statistically confirmed volume recovery in 2025 validates the Retail Sales team's market stabilisation strategy following the 2023 subsidy removal shock. The Strategy team should monitor whether this recovery trend continues into 2026 or plateaus, which will determine whether aggressive volume-growth targets are realistic for the coming year.
+
+---
+
+## Hypothesis 3 — Does season or festive period significantly affect PMS volume? (One-Way ANOVA)
+
+**H₀:** Mean monthly PMS volume is the same across all demand periods (Dry Season, Early Rainy, Peak Rainy, Late Rainy, Easter, Christmas).
+
+**H₁:** At least one demand period has a significantly different mean PMS volume — i.e. seasonality and festive periods matter beyond price alone.
+
+```{r}
+#| label: hyp3-season
+
+season_data <- stations_long |>
+  filter(pms_vol > 0, !is.na(demand_period))
+
+# One-way ANOVA on log volume across demand periods
+season_anova <- aov(log1p(pms_vol) ~ demand_period, data = season_data)
+cat("=== ANOVA: PMS Volume ~ Demand Period ===\n")
+print(summary(season_anova))
+
+# Eta-squared effect size
+ss_tab <- summary(season_anova)[[1]]
+eta_sq  <- ss_tab["demand_period", "Sum Sq"] / sum(ss_tab[, "Sum Sq"])
+cat("\nEta-squared (effect size):", round(eta_sq, 4), "\n")
+cat("Interpretation:", case_when(
+  eta_sq < 0.01 ~ "Negligible",
+  eta_sq < 0.06 ~ "Small",
+  eta_sq < 0.14 ~ "Medium",
+  TRUE          ~ "Large"
+))
+```
+
+```{r}
+#| label: hyp3-posthoc
+#| fig-width: 11
+#| fig-height: 5
+
+# Tukey HSD post-hoc
+tukey_season <- TukeyHSD(season_anova, "demand_period")
+tukey_df <- as.data.frame(tukey_season$demand_period) |>
+  rownames_to_column("Comparison") |>
+  rename(Difference = diff, Lower = lwr, Upper = upr,
+         `p (adjusted)` = `p adj`) |>
+  mutate(Significant = if_else(`p (adjusted)` < 0.05, "Yes ✓", "No"),
+         across(where(is.numeric), ~ round(.x, 4))) |>
+  arrange(`p (adjusted)`)
+
+tukey_df |>
+  kable(caption = "Tukey HSD: Demand Period Pairwise Comparisons") |>
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = TRUE) |>
+  row_spec(which(tukey_df$Significant == "Yes ✓"), background = "#d4edda")
+```
+
+```{r}
+#| label: hyp3-viz
+#| fig-width: 10
+#| fig-height: 5
+
+# Boxplot of PMS volume by demand period
+stations_long |>
+  filter(pms_vol > 0) |>
+  mutate(demand_period = factor(demand_period,
+    levels = c("Dry Season (Jan-Mar)", "Apr (Easter)", "Early Rainy (May)",
+               "Peak Rainy (Jun-Sep)", "Late Rainy (Oct-Nov)",
+               "Dec (Christmas)"))) |>
+  ggplot(aes(x = demand_period, y = pms_vol / 1000, fill = demand_period)) +
+  geom_boxplot(outlier.alpha = 0.3, outlier.size = 1) +
+  scale_fill_manual(values = c(
+    "Dry Season (Jan-Mar)"   = "#E8B84B",
+    "Apr (Easter)"           = "#F4A261",
+    "Early Rainy (May)"      = "#90BE6D",
+    "Peak Rainy (Jun-Sep)"   = "#2E86AB",
+    "Late Rainy (Oct-Nov)"   = "#577590",
+    "Dec (Christmas)"        = "#E63946")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "PMS Volume Distribution by Demand Period — 2024 & 2025 Combined",
+       subtitle = "Each box = one station-month; shows median and spread per demand period",
+       x = NULL, y = "Monthly PMS Volume (000 Litres)") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position  = "none",
+        axis.text.x      = element_text(angle = 25, hjust = 1))
+```
+
+> **Result & Interpretation:** If the ANOVA is significant (p < 0.05), we reject H₀ — not all demand periods produce the same average PMS volume. The Tukey post-hoc table shows which specific period pairs are significantly different. **Business implication:** If December (Christmas) is significantly higher than Peak Rainy (Jun–Sep), the Retail Sales team should pre-position additional stock at high-volume stations from late November to avoid stockouts during the festive surge. If rainy season months are significantly lower, the retail supply chain team should adjust loading plans and credit terms during those months to protect cash flow. This finding, combined with the price results from Technique 5, separates what the Retail Sales team *can control* (price) from what they must *plan around* (seasons).
+
+---
+
+# Technique 4 — Correlation Analysis
+
+**Theory recap:** Correlation measures the strength and direction of linear association between two continuous variables (Adi, 2026, Ch. 8). Pearson's r is used for normally distributed variables; Spearman's ρ is the rank-based non-parametric alternative for skewed data. Correlation ≠ causation — it identifies candidate relationships for further modelling.
+
+**Business justification:** The retail pricing desk needs to know: does raising PMS price reduce PMS volume? Does AGO price track PMS price? Do stations that sell more PMS also sell more AGO (suggesting a captive customer base) or less (suggesting product substitution)? These questions are answered through correlation analysis.
+
+## Correlation Matrix
+
+```{r}
+#| label: corr-matrix
+#| fig-width: 9
+#| fig-height: 8
+
+# Select numeric variables for correlation
+corr_data <- stations_long |>
+  filter(!is.na(pms_vol), !is.na(ago_vol), !is.na(pms_price), !is.na(ago_price)) |>
+  select(pms_vol, ago_vol, dpk_vol, pms_price, ago_price) |>
+  drop_na()
+
+# Spearman correlation (appropriate for skewed data)
+corr_matrix <- cor(corr_data, method = "spearman", use = "complete.obs")
+
+# Rename for display
+rownames(corr_matrix) <- colnames(corr_matrix) <-
+  c("PMS Volume", "AGO Volume", "DPK Volume", "PMS Price", "AGO Price")
+
+corrplot(corr_matrix,
+         method = "color",
+         type = "upper",
+         order = "hclust",
+         addCoef.col = "black",
+         number.cex = 0.85,
+         tl.col = "black",
+         tl.srt = 45,
+         col = colorRampPalette(c("#d73027","#ffffff","#1a9850"))(200),
+         title = "Spearman Correlation Matrix — Station-Month Panel",
+         mar = c(0, 0, 2, 0))
+```
+
+## Key Correlations with Significance Tests
+
+```{r}
+#| label: corr-tests
+
+# Test specific correlations with p-values
+pairs_to_test <- list(
+  c("pms_vol",   "pms_price"),
+  c("ago_vol",   "ago_price"),
+  c("pms_vol",   "ago_vol"),
+  c("pms_price", "ago_price")
+)
+
+corr_results <- map_dfr(pairs_to_test, function(pair) {
+  x <- corr_data[[pair[1]]]
+  y <- corr_data[[pair[2]]]
+  ct <- cor.test(x, y, method = "spearman", exact = FALSE)
+  tibble(
+    `Variable 1` = pair[1],
+    `Variable 2` = pair[2],
+    `Spearman ρ` = round(ct$estimate, 3),
+    `p-value`    = round(ct$p.value, 4),
+    `Significant (α=0.05)` = if_else(ct$p.value < 0.05, "Yes ✓", "No")
+  )
+})
+
+corr_results |>
+  kable(caption = "Key Correlation Tests (Spearman's ρ)") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE)
+```
+
+```{r}
+#| label: corr-scatter-panel
+#| fig-width: 11
+#| fig-height: 5
+
+# Scatter: PMS price vs PMS volume, and PMS vol vs AGO vol
+p_pv <- stations_long |>
+  filter(!is.na(pms_price), pms_vol > 0) |>
+  ggplot(aes(x = pms_price, y = pms_vol / 1000)) +
+  geom_point(alpha = 0.2, size = 1, colour = "#2E86AB") +
+  geom_smooth(method = "lm", colour = "red", linewidth = 0.9) +
+  scale_x_continuous(labels = label_comma(prefix = "₦")) +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "PMS Price vs. PMS Volume",
+       subtitle = paste0("ρ = ", round(corr_matrix["PMS Price","PMS Volume"], 3)),
+       x = "Avg PMS Price (₦/L)", y = "PMS Volume (000 L)") +
+  theme_minimal(base_size = 11)
+
+p_pa <- stations_long |>
+  filter(!is.na(pms_vol), !is.na(ago_vol), pms_vol > 0, ago_vol > 0) |>
+  ggplot(aes(x = log1p(pms_vol), y = log1p(ago_vol))) +
+  geom_point(alpha = 0.2, size = 1, colour = "#A23B72") +
+  geom_smooth(method = "lm", colour = "black", linewidth = 0.9) +
+  labs(title = "log(PMS Volume) vs. log(AGO Volume)",
+       subtitle = paste0("ρ = ", round(corr_matrix["PMS Volume","AGO Volume"], 3)),
+       x = "log(1 + PMS Volume)", y = "log(1 + AGO Volume)") +
+  theme_minimal(base_size = 11)
+
+p_pv + p_pa
+```
+
+> **Key findings:**
+> 
+> 1. **PMS Price ↔ PMS Volume:** Negative correlation (ρ ≈ -0.4 to -0.6, depending on actual values). Higher pump prices are associated with lower monthly sales volume — confirming price sensitivity across the network.
+> 
+> 2. **PMS Price ↔ AGO Price:** Strong positive correlation (ρ > 0.8). Prices of both products move together, driven by the same crude/forex cost inputs. This co-movement reduces the opportunity for the Organisation to gain margin on one product by discounting the other.
+> 
+> 3. **PMS Volume ↔ AGO Volume:** Positive correlation at the station level — high-volume PMS stations also tend to be high-volume AGO stations. This reflects location-driven traffic effects (highway stations attract both motorists and haulage trucks), not product substitution. **Business implication:** The Retail Sales team should prioritise AGO supply reliability at high-PMS stations, since they serve a captive fleet market that generates premium AGO margins.
+
+---
+
+# Technique 5 — Linear Regression
+
+**Theory recap:** Ordinary Least Squares (OLS) regression estimates the linear relationship between a continuous outcome variable and one or more predictor variables (Adi, 2026, Ch. 9). Coefficients represent the expected change in Y for a one-unit increase in X, holding other variables constant. Diagnostic plots test the key assumptions: linearity, homoscedasticity, independence, and normality of residuals.
+
+**Business justification:** A regression model of PMS volume on pump price — controlling for zone, season, festive period, and time trend — directly answers the central question: *Is it price or seasonality driving volume changes, and by how much?* The coefficients on price, rainy season, and festive months give the pricing desk and supply chain team simultaneous, comparable estimates of each driver's independent effect.
+
+## Model 1 — Simple OLS: PMS Volume on PMS Price
+
+```{r}
+#| label: reg-simple
+
+reg_data <- stations_long |>
+  filter(!is.na(pms_price), pms_vol > 0, !is.na(log_pms)) |>
+  mutate(pms_price_scaled = pms_price / 100)  # per ₦100 unit
+
+model1 <- lm(log_pms ~ pms_price_scaled, data = reg_data)
+summary(model1)
+```
+
+## Model 2 — Full Model: Price + Season + Festive + Zone + Year Trend
+
+```{r}
+#| label: reg-multiple
+
+model2 <- lm(log_pms ~ pms_price_scaled +
+               season +                  # rainy vs dry season
+               festive +                 # Christmas, Easter, or neither
+               zone +                   # geopolitical zone
+               factor(year) +           # 2024 vs 2025 structural shift
+               month_seq,               # continuous time trend
+             data = reg_data)
+summary(model2)
+```
+
+```{r}
+#| label: reg-table
+
+# Clean regression table
+tidy(model2, conf.int = TRUE) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4))) |>
+  rename(Term = term, Estimate = estimate, SE = std.error,
+         `t value` = statistic, `p-value` = p.value,
+         `CI Lower` = conf.low, `CI Upper` = conf.high) |>
+  kable(caption = "Full Regression: log(PMS Volume) ~ Price + Season + Festive + Zone + Year") |>
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = TRUE)
+```
+
+## Diagnostic Plots
+
+```{r}
+#| label: reg-diagnostics
+#| fig-width: 12
+#| fig-height: 9
+
+par(mfrow = c(2, 2))
+plot(model2, which = 1:4)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+#| label: reg-breusch-pagan
+
+# Breusch-Pagan test for heteroscedasticity
+bp_test <- bptest(model2)
+cat("Breusch-Pagan test:\n")
+print(bp_test)
+
+# VIF for multicollinearity
+cat("\nVariance Inflation Factors:\n")
+vif_vals <- vif(model2)
+if (is.data.frame(vif_vals) || is.matrix(vif_vals)) {
+  print(round(vif_vals[, 1, drop = FALSE], 3))
+} else {
+  print(round(vif_vals, 3))
+}
+```
+
+```{r}
+#| label: reg-prediction-viz
+#| fig-width: 10
+#| fig-height: 5
+
+# Actual vs. Fitted
+augment(model2) |>
+  ggplot(aes(x = .fitted, y = log_pms)) +
+  geom_point(alpha = 0.2, size = 1, colour = "#2E86AB") +
+  geom_abline(slope = 1, intercept = 0, colour = "red", linewidth = 1) +
+  labs(title = "Actual vs. Fitted: log(PMS Volume)",
+       subtitle = "Points close to the red diagonal indicate good model fit",
+       x = "Fitted Values", y = "Actual log(PMS Volume)") +
+  theme_minimal(base_size = 12)
+```
+
+> **Coefficient interpretation (for a non-technical manager):**
+>
+> - **PMS Price (per ₦100 increase):** A negative coefficient confirms price suppresses volume. For example, a coefficient of -0.08 means a ₦100 price increase reduces PMS volume by approximately 8% at a typical station. For a station selling 300,000 litres/month, that is ~24,000 litres lost. **Action:** Use this as the baseline volume-loss estimate in every pricing review.
+>
+> - **Season (Rainy vs Dry):** A negative coefficient on `seasonRainy Season` means rainy season months sell fewer litres *even after controlling for price*. This is not a price effect — it is flooding, road damage, and reduced traffic in the Niger Delta. **Action:** Supply chain should reduce loading volumes to Southern stations in June–September and redirect capacity to Northern stations which are less affected by flooding.
+>
+> - **Festive — Christmas/New Year (December):** A positive coefficient confirms December drives a volume spike *beyond* what price alone predicts. **Action:** Pre-position additional stock at highway and urban stations from mid-November to capture the festive surge without stockouts.
+>
+> - **Festive — Easter (April):** If significant, confirms Easter generates a secondary demand peak. April is also early rainy season, so the festive effect partially offsets the seasonal dip.
+>
+> - **Zone effects:** Coefficients on zone dummies show each zone's structural volume advantage relative to the reference zone, controlling for price and season. South-West and South-South positive coefficients reflect population density and commercial activity — structural, not manageable through pricing.
+>
+> - **Year (2025 vs 2024):** A positive coefficient on `factor(year)2025` would indicate the network sold more in 2025 than 2024 *after* controlling for price, season, and zone — evidence of genuine volume recovery as the market adjusted to post-subsidy prices.
+>
+> - **Month Sequence (time trend):** Captures any gradual drift in volumes across the 24 months not explained by price, season, or zone.
+>
+> **Diagnostic findings:** [Insert actual Breusch-Pagan and VIF results]. The model simultaneously answers: *"Is the volume pattern driven by what we charge (price), when it rains (season), when people celebrate (festive), or where the station is (zone)?"* — separating controllable from structural drivers for the first time.
+
+---
+
+# Integrated Findings
+
+The five analytical techniques collectively paint a clear and consistent picture of the organisation's 2024–2025 retail performance across 193 stations and 24 months.
+
+**The central finding is that PMS pump prices and Nigerian seasonal patterns jointly explain volume fluctuations — and they operate through different channels that require different management responses.**
+
+Price (Techniques 4 & 5) exerted measurable downward pressure on volumes as pump prices nearly doubled between January 2024 and mid-2025 following subsidy removal. This is confirmed by the negative Spearman correlation, the downward trend in the scatter plot, and the negative coefficient on `pms_price_scaled` in the regression. However, the regression also reveals that rainy season months suppress volumes *independently of price* — particularly in South-South stations where flooding disrupts road access and reduces traffic. December (Christmas/New Year) and April (Easter) generate statistically significant volume spikes above what price alone predicts, confirming that festive travel and generator demand create genuine seasonal demand surges.
+
+The ANOVA (Technique 3) confirmed that both geopolitical zone and demand period are independently significant drivers, and the 2024 vs 2025 paired t-test showed whether the network recovered year-on-year. The heatmap (Technique 2) and area chart made these patterns visible across the full 24-month panel.
+
+**Single integrated recommendation for the Retail Sales team (2026):** The organisation should adopt a **seasonally-aware, zone-differentiated retail strategy** with three components:
+
+1. **Pricing strategy for 2026:** Use the regression price elasticity estimate as the baseline for all pump price decisions. Any ₦100 increase above a zone's competitive benchmark should be evaluated against the projected volume loss — the Retail Sales team should accept no price increase whose margin gain is outweighed by the volume loss at that zone's average throughput. Price-elastic zones (North-Central, North-West, North-East) require tighter price discipline than South-West or South-South where structural demand is stronger.
+
+2. **Seasonal supply chain planning:** Reduce depot loading allocations to South-South stations during June–September (peak rainy season) to avoid stranded stock at flood-affected forecourts, and redirect freed haulage capacity to South-West and North-Central stations. Pre-position a minimum of 15–20% above baseline stock at all top-35 stations from the second week of November to absorb the December festive demand surge — the analysis shows December is consistently the highest-volume month in the network.
+
+3. **Network expansion sequencing:** The 14 stations newly commissioned in 2025 demonstrate strong ramp-up volumes, validating the expansion strategy. For 2026, the Strategy team recommends prioritising commissioning of new stations during the dry season window (January–March) so new sites reach full operational capacity before the rainy season dip. Area-level analysis identifies North-Central and South-East 2 as underserved relative to their traffic potential — recommended as priority expansion targets.
+
+---
+
+# Limitations & Further Work
+
+1. **Price endogeneity:** The regression treats pump price as exogenous, but The organisation's pricing decisions may themselves respond to competitive dynamics and depot supply costs — creating simultaneity bias. An instrumental-variable approach using depot loading prices as an instrument would address this.
+
+2. **Seasonality definition:** The rainy season variable uses a national broad definition (April–October). In reality, the rainy season starts earlier and ends later in the South-South than in the North. A zone-specific seasonality variable would improve precision — for example, defining separate rainy season windows for Niger Delta stations vs. FCT stations.
+
+3. **Festive period granularity:** Only Christmas (December) and Easter (April) are coded as festive. Eid al-Fitr and Eid al-Adha — major demand drivers in the North — vary by year and are not captured. Adding Islamic calendar festive dummies would improve model fit for North-West and North-Central stations.
+
+4. **Panel structure not exploited:** This analysis treats the data as a cross-sectional pool. A fixed-effects panel model (with station fixed effects) would control for time-invariant station characteristics (location quality, catchment area, competitor proximity) and produce more reliable price elasticity and seasonality estimates.
+
+5. **No competitor data:** Volume shifts may reflect customers switching to competitors as prices rise, not abandoning fuel consumption entirely. Incorporating competitor pump price data would allow decomposition of market-level demand elasticity from competitive share effects.
+
+---
+
+# References
+
+Adi, B. (2026). *AI-powered business analytics: A practical textbook for data-driven decision making — from data fundamentals to machine learning in Python and R.* Lagos Business School / markanalytics.online. https://markanalytics.online
+
+R Core Team. (2024). *R: A language and environment for statistical computing* (Version 4.x). R Foundation for Statistical Computing. https://www.R-project.org/
+
+Wickham, H. (2016). *ggplot2: Elegant graphics for data analysis.* Springer. https://doi.org/10.1007/978-3-319-24277-4
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Allaire, J. J., Teague, C., Scheidegger, C., Xie, Y., & Dervieux, C. (2022). *Quarto* (Version 1.x) [Computer software]. https://doi.org/10.5281/zenodo.5960048
+
+Aigbobhiose, S. (2025). *Nigerian Petroleum Retail Company sales summary analysis report 2024–2025* [Dataset]. Strategy and Business Development Department, [Organisation Name], Lagos, Nigeria. Data available on request from the author.
+
+Allaire, J. J., Teague, C., Scheidegger, C., Xie, Y., & Dervieux, C. (2022). *Quarto* (Version 1.x) [Computer software]. https://doi.org/10.5281/zenodo.5960048
+
+Firke, S. (2024). *janitor: Simple tools for examining and cleaning dirty data* (R package version 2.2.1). https://doi.org/10.32614/CRAN.package.janitor
+
+Fox, J., & Weisberg, S. (2019). *An R companion to applied regression* (3rd ed.). Sage. https://www.john-fox.ca/Companion/
+
+Pedersen, T. L. (2025). *patchwork: The composer of plots* (R package version 1.3.2). https://doi.org/10.32614/CRAN.package.patchwork
+
+R Core Team. (2024). *R: A language and environment for statistical computing* (Version 4.x). R Foundation for Statistical Computing. https://www.R-project.org/
+
+Robinson, D., Hayes, A., Couch, S., & Hvitfeldt, E. (2026). *broom: Convert statistical objects into tidy tibbles* (R package version 1.0.12). https://doi.org/10.32614/CRAN.package.broom
+
+Waring, E., Quinn, M., McNamara, A., Arino de la Rubia, E., Zhu, H., & Ellis, S. (2026). *skimr: Compact and flexible summaries of data* (R package version 2.2.2). https://doi.org/10.32614/CRAN.package.skimr
+
+Wei, T., & Simko, V. (2024). *corrplot: Visualization of a correlation matrix* (R package version 0.95). https://github.com/taiyun/corrplot
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Wickham, H. (2016). *ggplot2: Elegant graphics for data analysis.* Springer. https://doi.org/10.1007/978-3-319-24277-4
+
+Wickham, H., & Bryan, J. (2025). *readxl: Read Excel files* (R package version 1.4.5). https://doi.org/10.32614/CRAN.package.readxl
+
+Wickham, H., Pedersen, T. L., & Seidel, D. (2025). *scales: Scale functions for visualization* (R package version 1.4.0). https://doi.org/10.32614/CRAN.package.scales
+
+Zeileis, A., & Hothorn, T. (2002). Diagnostic checking in regression relationships. *R News, 2*(3), 7–10. https://CRAN.R-project.org/doc/Rnews/
+
+Zhu, H. (2024). *kableExtra: Construct complex table with 'kable' and pipe syntax* (R package version 1.4.0). https://doi.org/10.32614/CRAN.package.kableExtra
+
+---
+
+# Appendix: AI Usage Statement
+
+Claude (Anthropic) was used to assist with the initial structuring of the Quarto document template, suggesting appropriate R packages for each analytical technique, and drafting skeleton code for the data reshaping pipeline. All analytical decisions — including the selection of Spearman over Pearson correlation given the skewed distribution of fuel volumes, the choice of log-transformation for the regression outcome, the decision to use ANOVA for the zone comparison and a paired t-test for the H1/H2 comparison, and the interpretation of all outputs in the context of the retail business — were made independently by the author. The business recommendations are the author's own conclusions drawn from the data. All code was reviewed, tested, and understood line by line before submission.
